@@ -1,0 +1,37 @@
+# Terraform / Terragrunt
+.terragrunt-cache/
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+crash.log
+crash.*.log
+
+# Generated at apply time
+modules/**/.build/**
+modules/app/s3-cloudfront-spa/edge/edge.zip
+**/__pycache__/
+*.py[cod]
+
+# Bootstrap writes a per-account backend.hcl on every run; it carries the
+# account id, which stays out of git.
+bootstrap/backend.hcl
+bootstrap/terraform.tfstate*
+bootstrap/.terraform/
+
+# Node
+node_modules/
+dist/
+**/.vite/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+.DS_Store

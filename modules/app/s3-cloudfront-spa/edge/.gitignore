@@ -1,0 +1,7 @@
+# Lambda@Edge zip + Python bytecode are build artefacts; Terraform
+# regenerates the zip on every apply, and __pycache__ comes from local
+# smoke tests of edge.py.
+__pycache__/
+*.py[cod]
+*.zip
+config.json
