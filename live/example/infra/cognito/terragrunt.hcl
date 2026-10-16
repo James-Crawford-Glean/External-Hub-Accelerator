@@ -41,4 +41,13 @@ inputs = {
   # Google OAuth client credentials, populated out-of-band (see README).
   # Cognito reads {client_id, client_secret} from the `web` sub-key.
   google_secret_name = "${local.project}-${local.env}/oidc/google"
+
+  # OAuth 2.1 resource server for the MCP server, plus a public PKCE client
+  # for manual flow checks. An MCP host's own client (Glean's) is minted at
+  # runtime through the MCP server's DCR endpoint, so its redirect URI is not
+  # listed here. The identifier must equal the MCP stack's public URL.
+  mcp = {
+    resource_identifier = "https://mcp.${local.env}.${local.env_vars.locals.domain_root}"
+    callback_urls       = ["http://localhost:8080/callback"]
+  }
 }

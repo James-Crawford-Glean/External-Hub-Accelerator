@@ -29,6 +29,7 @@ inputs = {
   #   - `<project>-<env>/oidc/google`: created out-of-band before the Cognito
   #     stack's first apply and referenced by name from there.
   secret_names = [
-    "api-key-pepper", # HMAC pepper the authorizer uses to hash opaque API keys
+    "api-key-pepper",       # HMAC pepper the authorizer uses to hash opaque API keys
+    "glean-indexing-token", # datasource-scoped Indexing API token for the glean-index worker
   ]
 }

@@ -1,0 +1,224 @@
+/**
+ * Developer portal theme.
+ *
+ * Mirrors the visual language of Glean's developer site
+ * (developers.glean.com — @gleanwork/docusaurus-theme-glean). That theme is a
+ * workspace-only package (not published to npm), so rather than depend on it we
+ * replicate its brand tokens here: DM Sans / JetBrains Mono typography, the
+ * Glean color palette (primary #343ced, accent #d8fd49), and a #202124 dark
+ * mode. Kept lean — only the tokens that shape the look, not the dev-site's
+ * site-specific component CSS (OpenAPI labels, MCP tooltips, etc.).
+ */
+
+/* Brand fonts — loaded from Google Fonts at runtime (no build/install step). */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Primary — Glean brand blue and its ramp. */
+  --ifm-color-primary: #343ced;
+  --ifm-color-primary-dark: #1e26d6;
+  --ifm-color-primary-darker: #1c24ca;
+  --ifm-color-primary-darkest: #171ea6;
+  --ifm-color-primary-light: #4d54ef;
+  --ifm-color-primary-lighter: #5b62f0;
+  --ifm-color-primary-lightest: #7f85f3;
+
+  /* Glean brand accents (used for subtle highlights). */
+  --glean-brand-green: #d8fd49;
+  --glean-brand-oatmeal: #f6f3eb;
+  --glean-brand-pink: #f1b7ff;
+  --glean-brand-peach: #ffcfbd;
+  --glean-brand-light-blue: #a9e0ff;
+  --glean-brand-yellow: #ffdf69;
+
+  /* Typography — DM Sans everywhere, JetBrains Mono for code. */
+  --ifm-font-family-base: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ifm-heading-font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  --ifm-code-font-size: 92%;
+  --ifm-heading-font-weight: 700;
+
+  --ifm-global-radius: 8px;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+}
+
+/* Lighter, higher-contrast palette for dark mode, on the Glean #202124 base. */
+[data-theme='dark'] {
+  --ifm-color-primary: #5c62f1;
+  --ifm-color-primary-dark: #3d44ef;
+  --ifm-color-primary-darker: #2d35ee;
+  --ifm-color-primary-darkest: #1922eb;
+  --ifm-color-primary-light: #7b80f3;
+  --ifm-color-primary-lighter: #8b8ff4;
+  --ifm-color-primary-lightest: #b8bbf9;
+
+  --ifm-background-color: #202124;
+  --ifm-background-surface-color: #2a2b2f;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Navbar: crisp hairline + soft shadow, matching the dev-site's flat header. */
+.navbar {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+/* Docusaurus's decorative external-link sprite must not take up layout space.
+   Some deployed HTML/CSS combinations leave this body-level SVG inline.
+   Hidden but still laid out: mermaid appends a scratch SVG here to measure
+   text, and getBBox throws on a display:none subtree. */
+body > svg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Suppress Docusaurus's base-URL diagnostic banner when a stale asset triggers
+   its false-positive check. */
+#__docusaurus-base-url-issue-banner-container {
+  display: none !important;
+}
+
+/* GraphiQL fills its (already viewport-minus-navbar-sized) mount container. */
+.graphiql-container {
+  height: 100%;
+}
+
+/* Mermaid renders client-side (src/clientModules/mermaid.ts). Hide the raw
+   fenced source so the diagram text never flashes before the swap; the module
+   marks the document when it cannot load so the source is still readable. */
+.theme-code-block.language-mermaid {
+  visibility: hidden;
+}
+
+html[data-mermaid='failed'] .theme-code-block.language-mermaid {
+  visibility: visible;
+}
+
+.docusaurus-mermaid-container {
+  --mermaid-surface: var(--glean-brand-oatmeal);
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-global-radius);
+  background: var(--mermaid-surface);
+  overflow-x: auto;
+}
+
+[data-theme='dark'] .docusaurus-mermaid-container {
+  --mermaid-surface: var(--ifm-background-surface-color);
+}
+
+.docusaurus-mermaid-container svg,
+.dev-lightbox__stage svg {
+  font-family: var(--ifm-font-family-base) !important;
+  display: block;
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+/* Sequence messages spanning several participants would otherwise print over
+   the lifelines they cross. Mermaid's own rules are scoped by the diagram's id,
+   so an unqualified declaration here loses to them and the halo silently
+   resolves to `stroke: none`. */
+.docusaurus-mermaid-container .messageText,
+.dev-lightbox__stage .messageText {
+  paint-order: stroke !important;
+  stroke: var(--mermaid-surface) !important;
+  stroke-width: 6px !important;
+  stroke-linejoin: round !important;
+}
+
+/* Lightbox (src/clientModules/lightbox.ts). The stage derives both dimensions
+   from the artifact's own aspect ratio, so it fills 90% of the viewport on its
+   constraining axis and the artifact is never stretched to fit. */
+[data-dev-zoomable] {
+  cursor: zoom-in;
+}
+
+[data-dev-zoomable]:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 4px;
+}
+
+html.dev-lightbox-open {
+  overflow: hidden;
+}
+
+.dev-lightbox {
+  display: none;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.dev-lightbox[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dev-lightbox::backdrop {
+  background: rgba(32, 33, 36, 0.85);
+}
+
+.dev-lightbox__stage {
+  --dev-lightbox-aspect: 1.6;
+  --mermaid-surface: var(--glean-brand-oatmeal);
+  width: min(90vw, calc(90vh * var(--dev-lightbox-aspect)));
+  height: min(90vh, calc(90vw / var(--dev-lightbox-aspect)));
+  border-radius: var(--ifm-global-radius);
+  background: var(--mermaid-surface);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+[data-theme='dark'] .dev-lightbox__stage {
+  --mermaid-surface: var(--ifm-background-surface-color);
+}
+
+.dev-lightbox__stage > svg,
+.dev-lightbox__stage > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.dev-lightbox__stage > img {
+  object-fit: contain;
+}
+
+.dev-lightbox__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(32, 33, 36, 0.6);
+  color: #ffffff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dev-lightbox__close:hover {
+  background: rgba(32, 33, 36, 0.9);
+}

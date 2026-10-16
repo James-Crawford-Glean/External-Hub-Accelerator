@@ -1,5 +1,5 @@
 variable "name_prefix" {
-  description = "Prefix for table names. e.g. '<project>-<env>' -> '<project>-<env>-users'."
+  description = "Prefix for table names. e.g. '<project>-<env>' -> '<project>-<env>-api_keys'."
   type        = string
 }
 

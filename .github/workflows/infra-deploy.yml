@@ -1,0 +1,143 @@
+# infra-deploy
+#
+# Policy: infra deploys are EXPLICIT. workflow_dispatch only; no push, no
+# schedule, no auto-trigger from merges. Run `terragrunt run --all plan`
+# locally before triggering. GitHub Environment protection rules (required
+# reviewers, deployment branches) on the matching environment add gating.
+#
+# The deploy role is created by live/_shared/github-oidc and trusts the
+# GitHub Environment claim repo:<org>/<repo>:environment:<env>, so this
+# workflow can only assume it from a job that declares that environment.
+
+name: infra-deploy
+run-name: infra-deploy ${{ inputs.stack }} to ${{ inputs.env }} (${{ inputs.ref }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Target environment (a directory under live/)
+        required: true
+        default: example
+        type: string
+      stack:
+        description: '"all" applies every stack in the env in dependency order. A single stack path (e.g. app/appsync) deploys just that stack; app/* stacks apply data-pipeline/aurora-migrate first so a code deploy never outruns its schema.'
+        required: true
+        default: all
+        type: string
+      ref:
+        description: Git ref to deploy
+        required: false
+        default: main
+        type: string
+
+# Serialise deploy runs against the same env so two operators cannot race.
+concurrency:
+  group: infra-deploy-${{ inputs.env }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: 1.15.4
+  TG_VERSION: 1.0.6
+  # One provider copy hardlinked into every stack instead of a full copy per
+  # .terragrunt-cache; keeps `run --all` within the runner's disk.
+  TG_PROVIDER_CACHE: 1
+  TG_PROVIDER_CACHE_DIR: ${{ github.workspace }}/.tg-provider-cache
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    # Every value env.hcl reads from the environment comes from GitHub
+    # Environment variables (Settings -> Environments -> <env> -> Variables),
+    # so one workflow serves every env without a per-env branch.
+    env:
+      AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      PORTAL_DOMAIN_ROOT: ${{ vars.PORTAL_DOMAIN_ROOT }}
+      ROUTE53_ZONE_ID: ${{ vars.ROUTE53_ZONE_ID }}
+      ALLOWED_EMAIL_DOMAINS: ${{ vars.ALLOWED_EMAIL_DOMAINS }}
+      GLEAN_BASE_URL: ${{ vars.GLEAN_BASE_URL }}
+      MCP_REDIRECT_HOSTS: ${{ vars.MCP_REDIRECT_HOSTS }}
+      UPSTREAM_URL: ${{ vars.UPSTREAM_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Check environment variables
+        run: |
+          missing=()
+          for v in AWS_ACCOUNT PORTAL_DOMAIN_ROOT ROUTE53_ZONE_ID ALLOWED_EMAIL_DOMAINS GLEAN_BASE_URL; do
+            [ -n "${!v}" ] || missing+=("$v")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::GitHub Environment '${{ inputs.env }}' is missing variables: ${missing[*]}"
+            exit 1
+          fi
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Install Terragrunt
+        run: |
+          curl -fsSL -o /usr/local/bin/terragrunt \
+            https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+          chmod +x /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build backend bundles
+        # The Lambda stacks zip backend/dist/<app> at apply time, so the bundles
+        # must exist before any plan or apply that touches them.
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: terragrunt apply
+        working-directory: live/${{ inputs.env }}
+        run: |
+          if [[ "${{ inputs.stack }}" == "all" ]]; then
+            terragrunt --non-interactive run --all apply
+          else
+            if [[ "${{ inputs.stack }}" == app/* ]]; then
+              echo "Preflight: applying data-pipeline/aurora-migrate (idempotent) before '${{ inputs.stack }}'."
+              (cd data-pipeline/aurora-migrate && terragrunt --non-interactive run -- apply -auto-approve -input=false)
+            fi
+            cd "${{ inputs.stack }}"
+            terragrunt --non-interactive run -- apply -auto-approve -input=false
+          fi
+
+      - name: Outputs
+        working-directory: live/${{ inputs.env }}
+        run: |
+          out() { (cd "$1" && terragrunt --non-interactive run -- output -raw "$2" 2>/dev/null) || echo "(not applied)"; }
+          {
+            echo "## ${{ inputs.env }}"
+            echo
+            echo "| Output | Value |"
+            echo "|---|---|"
+            echo "| Web app | $(out app/spa public_url) |"
+            echo "| GraphQL | $(out app/appsync graphql_endpoint) |"
+            echo "| MCP | $(out app/mcp public_url)/mcp |"
+            echo "| Cognito issuer | $(out infra/cognito issuer_url) |"
+            echo "| Hosted UI | $(out infra/cognito hosted_ui_url) |"
+            echo "| MCP scopes | $(out infra/cognito mcp_scope_identifiers) |"
+          } >> "$GITHUB_STEP_SUMMARY"

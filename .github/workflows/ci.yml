@@ -26,7 +26,7 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
-      - name: Install terragrunt
+      - name: Install terragrunt and ripgrep
         run: |
           curl -fsSL -o /usr/local/bin/terragrunt \
             https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
@@ -34,6 +34,10 @@ jobs:
           sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Sanitization guard
         run: scripts/check-sanitized.sh
+      - name: actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest /usr/local/bin >/dev/null
+          actionlint -no-color .github/workflows/*.yml
       - name: Format
         run: |
           terraform fmt -recursive -check
@@ -42,5 +46,67 @@ jobs:
         run: scripts/validate-modules.sh
       - name: Validate stacks
         run: terragrunt hcl validate --inputs --working-dir live
-      - name: Edge handler tests
-        run: python3 -m pip install -q pytest && python3 -m pytest -q modules/app/s3-cloudfront-spa/edge
+      - name: Python helper tests
+        run: python3 -m pip install -q pytest && python3 -m pytest -q modules/app/s3-cloudfront-spa/edge modules/app/appsync
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Migrations are generated from migrations/*.sql
+        run: node apps/workers/migrate/gen-migrations.mjs && git diff --exit-code -- apps/workers/migrate/src/migrations.generated.ts
+
+  portal:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/portal/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -b
+      - run: pnpm exec eslint .
+      - run: pnpm exec vitest run
+      - run: pnpm exec vite build
+        env:
+          VITE_GRAPHQL_URL: https://gql.example.portal.example.com/graphql
+
+  dev-portal:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/dev/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build

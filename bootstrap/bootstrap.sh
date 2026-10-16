@@ -26,17 +26,16 @@ PROJECT="${PROJECT:-portal}"
 ACCOUNT_ID="$1"
 REGION="${2:-us-east-2}"
 BUCKET="${PROJECT}-tf-state-${ACCOUNT_ID}"
-LOCK_TABLE="${PROJECT}-tf-locks"
 
 cd "$(dirname "$0")"
 
 # Per-account backend config; not committed.
 cat > backend.hcl <<HCL
-bucket         = "${BUCKET}"
-key            = "bootstrap/terraform.tfstate"
-region         = "${REGION}"
-dynamodb_table = "${LOCK_TABLE}"
-encrypt        = true
+bucket       = "${BUCKET}"
+key          = "bootstrap/terraform.tfstate"
+region       = "${REGION}"
+use_lockfile = true
+encrypt      = true
 HCL
 
 TF_VARS=(-var="project=${PROJECT}" -var="aws_account_id=${ACCOUNT_ID}" -var="aws_region=${REGION}")

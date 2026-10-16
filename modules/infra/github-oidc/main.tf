@@ -187,16 +187,6 @@ data "aws_iam_policy_document" "spa_deploy" {
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
     resources = ["${var.state_bucket_arn}/${var.project}/*"]
   }
-  statement {
-    sid = "StateLock"
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
-      "dynamodb:DescribeTable",
-    ]
-    resources = [var.lock_table_arn]
-  }
 
   # ---------------------------------------------------------------------------
   # BROAD ALLOWS — within the dedicated AWS account, the account itself is

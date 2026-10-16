@@ -1,8 +1,7 @@
-# Bootstraps the Terraform state backend for this project in one AWS account.
-#
-# - Bucket:     <project>-tf-state-<account_id>
-# - Lock table: <project>-tf-locks (used by this bootstrap only; live/ stacks
-#               lock with the S3-native lockfile and never touch the table)
+# Bootstraps the Terraform state backend for this project in one AWS account:
+# one versioned, encrypted, private S3 bucket, <project>-tf-state-<account_id>.
+# Locking uses Terraform's S3-native lockfile (a .tflock object beside each
+# state file), so no DynamoDB table is involved anywhere in this repo.
 #
 # Self-rehoming: after the first apply on local state, this stack's own state
 # is migrated into the bucket it just created. After that, every operator
@@ -12,7 +11,7 @@
 # first time.
 
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.10"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -37,7 +36,6 @@ provider "aws" {
 
 locals {
   state_bucket = "${var.project}-tf-state-${var.aws_account_id}"
-  lock_table   = "${var.project}-tf-locks"
 }
 
 resource "aws_s3_bucket" "state" {
@@ -71,20 +69,4 @@ resource "aws_s3_bucket_public_access_block" "state" {
   restrict_public_buckets = true
 }
 
-resource "aws_dynamodb_table" "lock" {
-  name         = local.lock_table
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 output "state_bucket" { value = aws_s3_bucket.state.id }
-output "lock_table" { value = aws_dynamodb_table.lock.name }

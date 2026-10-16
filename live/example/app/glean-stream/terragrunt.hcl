@@ -57,5 +57,6 @@ inputs = {
     GLEAN_BASE_URL      = get_env("GLEAN_BASE_URL")
     GLEAN_SCOPES        = "openid email offline_access search chat entities"
     GLEAN_REDIRECT_URIS = "http://localhost:5173/glean/callback,https://${local.env_vars.locals.spa_domain}/${local.app}/glean/callback"
+    GLEAN_CLIENT_NAME   = local.project
   }
 }

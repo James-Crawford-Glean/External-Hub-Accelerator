@@ -1,0 +1,25 @@
+# Dependencies
+/node_modules
+
+# Docusaurus build output
+/dist
+/build
+/.docusaurus
+.cache-loader
+
+# Generated GraphQL reference (produced from ../../backend/schema.graphql at build).
+# The whole directory is a build artifact. The hand-authored landing page is the
+# plugin's `homepage` source at graphql/reference-home.md (outside ./docs) and stays
+# committed; the plugin copies it in here at build time.
+/docs/graphql/reference/
+
+# Local env
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

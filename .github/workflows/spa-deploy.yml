@@ -1,0 +1,163 @@
+# spa-deploy
+#
+# Builds one web app (apps/<app>) against the target environment's live
+# configuration, read from Terraform outputs so there is no hand-maintained
+# per-env variable to drift, then syncs it to the SPA bucket under /<app>/ and
+# invalidates CloudFront. workflow_dispatch only.
+
+name: spa-deploy
+run-name: spa-deploy ${{ inputs.app }} to ${{ inputs.env }} (${{ inputs.ref }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Target environment (a directory under live/)
+        required: true
+        default: example
+        type: string
+      app:
+        description: App to build and deploy (a directory under apps/, listed in the env's spa_apps)
+        required: true
+        default: portal
+        type: choice
+        options: [portal, dev]
+      ref:
+        description: Git ref to deploy
+        required: false
+        default: main
+        type: string
+
+concurrency:
+  group: spa-deploy-${{ inputs.env }}-${{ inputs.app }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: 1.15.4
+  TG_VERSION: 1.0.6
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    env:
+      AWS_ACCOUNT: ${{ vars.AWS_ACCOUNT }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+      PORTAL_DOMAIN_ROOT: ${{ vars.PORTAL_DOMAIN_ROOT }}
+      ROUTE53_ZONE_ID: ${{ vars.ROUTE53_ZONE_ID }}
+      ALLOWED_EMAIL_DOMAINS: ${{ vars.ALLOWED_EMAIL_DOMAINS }}
+      GLEAN_BASE_URL: ${{ vars.GLEAN_BASE_URL }}
+      MCP_REDIRECT_HOSTS: ${{ vars.MCP_REDIRECT_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/${{ inputs.app }}/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: apps/${{ inputs.app }}
+        run: pnpm install --frozen-lockfile
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Resolve live configuration from Terraform outputs
+        working-directory: live/${{ inputs.env }}
+        run: |
+          curl -fsSL -o /usr/local/bin/terragrunt \
+            https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+          chmod +x /usr/local/bin/terragrunt
+          out() { (cd "$1" && terragrunt --non-interactive run -- output -raw "$2" 2>/dev/null) || true; }
+
+          G="$(out app/appsync graphql_endpoint)"
+          A="$(out infra/cognito issuer_url)"
+          C="$(out infra/cognito app_client_id)"
+          H="$(out infra/cognito hosted_ui_url | sed 's#^https\?://##')"
+          B="$(out app/spa bucket)"
+          D="$(out app/spa distribution_id)"
+          U="$(out app/spa public_url)"
+          # A missing value is a deploy failure, never a silently unconfigured build.
+          for pair in "graphql:$G" "authority:$A" "client:$C" "hosted:$H" "bucket:$B" "distribution:$D"; do
+            if [ -z "${pair#*:}" ]; then
+              echo "::error::live configuration missing (${pair%%:*}). Has infra-deploy run for '${{ inputs.env }}'?"
+              exit 1
+            fi
+          done
+          {
+            echo "VITE_GRAPHQL_URL=$G"
+            echo "VITE_COGNITO_AUTHORITY=$A"
+            echo "VITE_COGNITO_CLIENT_ID=$C"
+            echo "VITE_COGNITO_HOSTED_DOMAIN=$H"
+            echo "VITE_SITE_URL=$U"
+            echo "SPA_BUCKET=$B"
+            echo "CLOUDFRONT_DISTRIBUTION_ID=$D"
+            # Admin > AWS deep links and RUM; optional, best-effort.
+            echo "VITE_AWS_DASHBOARD_NAME=$(out infra/observability dashboard_name)"
+            echo "VITE_AWS_BILLING_DASHBOARD_NAME=$(out infra/billing billing_dashboard_name)"
+            echo "VITE_RUM_APP_MONITOR_ID=$(out app/rum app_monitor_id)"
+            echo "VITE_RUM_IDENTITY_POOL_ID=$(out app/rum identity_pool_id)"
+          } >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: apps/${{ inputs.app }}
+        env:
+          VITE_ENV: ${{ inputs.env }}
+          VITE_GIT_SHA: ${{ github.sha }}
+          VITE_APP_PATH: ${{ inputs.app }}
+          VITE_PORTAL_NAME: ${{ vars.PORTAL_NAME || 'Portal' }}
+          VITE_AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT }}
+          VITE_AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
+          VITE_GITHUB_ORG: ${{ github.repository_owner }}
+          VITE_GITHUB_REPO: ${{ github.event.repository.name }}
+        run: pnpm build
+
+      # Single-page apps: hashed, immutable assets plus one index.html served
+      # for every route by the edge function. Only index.html is invalidated.
+      - name: Upload (single-page app)
+        if: inputs.app != 'dev'
+        run: |
+          aws s3 sync "apps/${{ inputs.app }}/dist/" "s3://${SPA_BUCKET}/${{ inputs.app }}/" \
+            --delete --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp "apps/${{ inputs.app }}/dist/index.html" "s3://${SPA_BUCKET}/${{ inputs.app }}/index.html" \
+            --cache-control "public,max-age=0,must-revalidate" --content-type "text/html; charset=utf-8"
+          aws cloudfront create-invalidation --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths "/${{ inputs.app }}/index.html"
+
+      # Multi-page static sites (the Docusaurus developer portal): every route
+      # is a real .html object, so HTML is never immutable and the whole prefix
+      # is invalidated. Assets stay hashed and immutable.
+      - name: Upload (multi-page site)
+        if: inputs.app == 'dev'
+        run: |
+          aws s3 sync "apps/${{ inputs.app }}/dist/" "s3://${SPA_BUCKET}/${{ inputs.app }}/" \
+            --delete --exclude "*.html" \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp "apps/${{ inputs.app }}/dist/" "s3://${SPA_BUCKET}/${{ inputs.app }}/" \
+            --recursive --exclude "*" --include "*.html" \
+            --cache-control "public,max-age=0,must-revalidate" --content-type "text/html; charset=utf-8"
+          aws cloudfront create-invalidation --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths "/${{ inputs.app }}/*"
+
+      - name: Summary
+        run: echo "Deployed **${{ inputs.app }}** to ${VITE_SITE_URL}/${{ inputs.app }}/" >> "$GITHUB_STEP_SUMMARY"

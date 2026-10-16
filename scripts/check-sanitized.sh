@@ -37,8 +37,8 @@ check "slack token" '\bxox[abprs]-[0-9A-Za-z-]{10,}\b'
 check "stripe-style key" '\b[sp]k_(live|test)_[0-9A-Za-z]{10,}\b'
 # Salesforce record ids (15 or 18 chars, known key prefixes).
 check "salesforce id" '\b(001|003|005|006|00Q|00D|00e|0014)[0-9A-Za-z]{11}([0-9A-Za-z]{3})?\b'
-# Email addresses other than documented placeholders.
-check "email address" '\b[A-Za-z0-9._%+-]+@(?!example\.com\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b' --pcre2
+# Email addresses other than documented placeholders (RFC 2606 example domains).
+check "email address" '(?i)\b[a-z0-9._%+-]+@(?!(?:[a-z0-9-]+\.)*example\.(?:com|net|org)\b|(?:[a-z0-9-]+\.)+example\b)[a-z0-9.-]+\.[a-z]{2,}\b' --pcre2
 # Hostnames that belong to the source project rather than the adopter. Glean
 # tenant backends are <tenant>-be.glean.com; only a concrete tenant is flagged.
 check "source-project hostname" '\b[a-z0-9.-]*(partnersync\.io|gleandemo\.com)\b'

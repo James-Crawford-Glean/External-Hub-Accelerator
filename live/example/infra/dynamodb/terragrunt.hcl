@@ -13,32 +13,18 @@ locals {
   project  = include.root.locals.project
 }
 
-# Platform tables every portal needs regardless of domain. Domain tables
-# (your entities, caches of upstream systems, event logs) are added to this
-# same map; the module creates one table per key, named <prefix>-<key>.
+# DynamoDB holds what needs O(1) key lookups or TTL expiry: service
+# credentials and the external-lookup cache. Relational data (users, roster,
+# domain entities, run logs) lives in Aurora; see backend/migrations.
+# Domain caches are added to this same map; the module creates one table per
+# key, named <prefix>-<key>.
 #
-# Every native PK is an opaque id (usr_<random>, apk_<random>, ...), never an
-# upstream system's id. Upstream ids live as attributes + GSIs for lookup.
+# Every native PK is an opaque id (apk_<random>, ...), never an upstream
+# system's id. Upstream ids live as attributes + GSIs for lookup.
 inputs = {
   name_prefix = "${local.project}-${local.env}"
 
   tables = {
-    # Portal users: who has authenticated. Resolved on every authed request
-    # from the Cognito `sub` claim, so that index is the hot path.
-    users = {
-      hash_key = "id"
-      attributes = [
-        { name = "id", type = "S" },
-        { name = "google_sub", type = "S" },
-        { name = "email", type = "S" },
-      ]
-      global_secondary_indexes = [
-        { name = "google-sub-index", hash_key = "google_sub" },
-        { name = "email-index", hash_key = "email" },
-      ]
-      pitr_enabled = true
-    }
-
     # Service credentials (opaque API keys). The raw secret is never stored,
     # only HMAC(pepper, token), looked up O(1) via hash-index. No TTL:
     # revoked and expired keys are retained for audit.
@@ -66,17 +52,6 @@ inputs = {
       ]
       ttl_attribute = "expires_at"
       pitr_enabled  = false
-    }
-
-    # Append-only log of scheduled job runs (one row per run, newest first).
-    sync_runs = {
-      hash_key  = "sync_type"
-      range_key = "ts_id"
-      attributes = [
-        { name = "sync_type", type = "S" },
-        { name = "ts_id", type = "S" },
-      ]
-      pitr_enabled = false
     }
   }
 }

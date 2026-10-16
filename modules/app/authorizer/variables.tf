@@ -58,3 +58,9 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "allowed_email_domains" {
+  type        = list(string)
+  default     = []
+  description = "Email domains a verified Cognito token must belong to (second layer behind the pre-sign-up gate). Empty = any domain the pool admitted."
+}

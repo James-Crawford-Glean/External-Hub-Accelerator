@@ -1,13 +1,9 @@
 # DynamoDB tables provisioned dynamically from var.tables.
 # Adding a table = add an entry to the map; no module edits.
 #
-# Two table shapes covered:
-#   1. SF projection caches (sf_accounts/sf_opportunities/sf_user_directory/
-#      enrichment_cache) — PK=id, SK=facet, TTL=expires_at. Read-through
-#      via lib/cache.py with stale-while-revalidate.
-#   2. Append-only event logs (partner_activities/sync_runs/
-#      data_quality_flags) — PK=<entity>, SK=ts_id (iso ts + uuid).
-#      Optional TTL on flag dismissal cleanup.
+# Shapes this fits: key-value credential stores (PK=id + a hash GSI),
+# read-through caches of upstream systems (PK=id, SK=facet, TTL=expires_at),
+# and append-only event logs (PK=<entity>, SK=ts_id).
 
 resource "aws_dynamodb_table" "this" {
   for_each = var.tables

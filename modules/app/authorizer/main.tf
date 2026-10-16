@@ -99,6 +99,7 @@ resource "aws_lambda_function" "this" {
       COGNITO_ISSUER        = var.cognito_issuer
       COGNITO_CLIENT_ID     = var.cognito_client_id
       COGNITO_MCP_RESOURCE  = var.cognito_mcp_resource
+      ALLOWED_EMAIL_DOMAINS = join(",", var.allowed_email_domains)
       DDB_TABLE_PREFIX      = var.ddb_table_prefix
       API_KEY_PEPPER_SECRET = data.aws_secretsmanager_secret.pepper.arn
     }

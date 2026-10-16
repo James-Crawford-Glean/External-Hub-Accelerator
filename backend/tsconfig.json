@@ -1,0 +1,94 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": [
+      "ES2023"
+    ],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@libs/access-requests": [
+        "libs/access-requests/src"
+      ],
+      "@libs/aurora": [
+        "libs/aurora/src"
+      ],
+      "@libs/authz": [
+        "libs/authz/src"
+      ],
+      "@libs/avatar": [
+        "libs/avatar/src"
+      ],
+      "@libs/cache": [
+        "libs/cache/src"
+      ],
+      "@libs/credentials": [
+        "libs/credentials/src"
+      ],
+      "@libs/di": [
+        "libs/di/src"
+      ],
+      "@libs/glean": [
+        "libs/glean/src"
+      ],
+      "@libs/glean-index": [
+        "libs/glean-index/src"
+      ],
+      "@libs/identity": [
+        "libs/identity/src"
+      ],
+      "@libs/items": [
+        "libs/items/src"
+      ],
+      "@libs/log": [
+        "libs/log/src"
+      ],
+      "@libs/login-events": [
+        "libs/login-events/src"
+      ],
+      "@libs/logo": [
+        "libs/logo/src"
+      ],
+      "@libs/metrics": [
+        "libs/metrics/src"
+      ],
+      "@libs/roster": [
+        "libs/roster/src"
+      ],
+      "@libs/sql": [
+        "libs/sql/src"
+      ],
+      "@libs/sync-runs": [
+        "libs/sync-runs/src"
+      ],
+      "@libs/testkit": [
+        "libs/testkit/src"
+      ],
+      "@libs/urls": [
+        "libs/urls/src"
+      ],
+      "@libs/worker": [
+        "libs/worker/src"
+      ]
+    }
+  },
+  "include": [
+    "apps/**/*.ts",
+    "libs/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts"
+  ]
+}

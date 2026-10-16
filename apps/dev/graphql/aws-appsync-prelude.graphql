@@ -1,0 +1,17 @@
+# AWS AppSync prelude for @graphql-markdown.
+#
+# The backend schema (../../backend/schema.graphql) is an AppSync SDL: it
+# uses AppSync's built-in auth directives (@aws_iam, @aws_lambda) and scalars
+# (AWSDate, AWSDateTime), which AppSync defines implicitly at deploy time. The
+# graphql-js parser that @graphql-markdown runs does NOT know them, so loading
+# the schema alone fails assertValidSDL ("Unknown directive/type").
+#
+# Declaring them here and loading this file ahead of the real schema makes the
+# merged SDL self-contained and valid, without editing the backend schema. Kept
+# out of docs/ so Docusaurus never renders it as a page.
+
+scalar AWSDate
+scalar AWSDateTime
+
+directive @aws_iam on OBJECT | FIELD_DEFINITION | INTERFACE | UNION | ENUM | SCALAR | INPUT_OBJECT | ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | SCHEMA
+directive @aws_lambda on OBJECT | FIELD_DEFINITION | INTERFACE | UNION | ENUM | SCALAR | INPUT_OBJECT | ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | SCHEMA

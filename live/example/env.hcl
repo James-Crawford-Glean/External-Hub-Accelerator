@@ -25,12 +25,14 @@ locals {
   spa_domain          = local.spa_domain_override != "" ? local.spa_domain_override : "${local.env}.${local.domain_root}"
 
   # SPA surfaces deployed in this env (apps/<name>/). The first entry that is
-  # also `spa_default_app` is served at the root redirect.
-  spa_apps        = ["portal"]
+  # also `spa_default_app` is served at the root redirect. Each entry also
+  # becomes a Cognito callback / logout URL (https://<spa_domain>/<app>/).
+  spa_apps        = ["portal", "dev"]
   spa_default_app = "portal"
 
-  # Apps in `spa_apps` served as multi-page static sites (e.g. a Docusaurus
+  # Apps in `spa_apps` served as multi-page static sites (the Docusaurus
   # developer portal) rather than single-page apps. The edge resolves per-route
-  # objects for these instead of falling back to the SPA index.html.
-  spa_static_apps = []
+  # objects for these instead of falling back to the SPA index.html; without
+  # this a deep link under /dev/ is a 404 at the edge.
+  spa_static_apps = ["dev"]
 }

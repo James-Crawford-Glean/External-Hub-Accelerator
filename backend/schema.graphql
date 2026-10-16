@@ -1,0 +1,277 @@
+# Portal GraphQL schema: the AppSync API definition and, through the appsync
+# module's parse-schema.py, the resolver wiring. Every Query/Mutation field
+# here must have a registered resolver in apps/api/src/registry.ts.
+#
+# Auth directives: @aws_lambda is the unified authorizer (Cognito ID tokens for
+# people, opaque API keys for machines); @aws_iam admits SigV4 callers (CI).
+#
+# Add a domain by appending its types and fields below. Keep IDs opaque
+# (usr_*, apk_*, your own prefixes); never expose an upstream system's id as
+# an ID! field.
+
+# platform enums -----------------------------------------------------------
+
+"Roster roles. ADMINISTRATOR and EDITOR may write; VIEWER reads. Admin is also an orthogonal flag."
+enum Role { ADMINISTRATOR EDITOR VIEWER }
+enum ApiKeyScope { READ WRITE ADMIN }
+enum ApiKeyStatus { ACTIVE REVOKED }
+
+# identity + access --------------------------------------------------------
+
+type User @aws_iam @aws_lambda {
+  id: ID!
+  name: String!
+  email: String!
+  title: String
+  "Roster role; null for a signed-in caller who is not on the roster yet."
+  role: Role
+  "Orthogonal admin flag (any role can be an admin)."
+  isAdmin: Boolean!
+  isActive: Boolean!
+  initials: String!
+  avatarUrl: String
+}
+
+type UserConnection @aws_iam @aws_lambda { items: [User!]! total: Int! }
+
+type RosterMember @aws_iam @aws_lambda {
+  email: String!
+  name: String
+  role: Role!
+  isAdmin: Boolean!
+}
+
+type AccessRequest @aws_iam @aws_lambda {
+  email: String!
+  name: String
+  "Number of times this user has signed in without a roster entry."
+  attempts: Int!
+  firstSeen: AWSDateTime!
+  lastSeen: AWSDateTime!
+}
+
+type LoginEvent @aws_iam @aws_lambda { id: ID! email: String! userAgent: String createdAt: AWSDateTime! }
+type LoginEventConnection @aws_iam @aws_lambda { items: [LoginEvent!]! total: Int! }
+
+# service credentials ------------------------------------------------------
+
+"An opaque service credential. Not tied to a person; authorized by its scopes. The secret is returned only once, at creation."
+type ApiKey @aws_iam @aws_lambda {
+  id: ID!
+  name: String!
+  prefix: String!
+  last4: String!
+  scopes: [ApiKeyScope!]!
+  status: ApiKeyStatus!
+  createdAt: AWSDateTime!
+  createdBy: String!
+  lastUsedAt: AWSDateTime
+  expiresAt: AWSDateTime
+  revokedAt: AWSDateTime
+}
+
+"`secret` is the full token, shown exactly once."
+type CreateApiKeyResult @aws_iam @aws_lambda {
+  apiKey: ApiKey!
+  secret: String!
+}
+
+input CreateApiKeyInput { name: String! scopes: [ApiKeyScope!]! expiresAt: AWSDateTime }
+
+# glean --------------------------------------------------------------------
+
+type GleanConnection @aws_iam @aws_lambda {
+  "Whether the backend has a Glean base URL configured at all."
+  configured: Boolean!
+  "The active Glean base URL (admin override or env default)."
+  baseUrl: String
+  "Whether the caller has a stored, usable Glean token."
+  connected: Boolean!
+  "A token row exists but can't be used without re-auth (expired, no usable refresh)."
+  needsReconnect: Boolean!
+  email: String
+  scopes: [String!]
+  expiresAt: AWSDateTime
+}
+
+type GleanConnectUrl @aws_iam @aws_lambda { url: String! }
+
+# logos --------------------------------------------------------------------
+
+"One stored logo image for a domain. kind: icon|mark|wordmark|banner|unknown."
+type LogoVariant @aws_iam @aws_lambda {
+  url: String!
+  kind: String!
+  width: Int
+  height: Int
+  format: String
+}
+
+"Logo lookup by domain through the logo cache."
+type DomainLogo @aws_iam @aws_lambda {
+  domain: String!
+  "CDN URL under this env's /logos/ path, or null on extraction failure"
+  logoUrl: String
+  "small square icon variant, or null"
+  logoIconUrl: String
+  "all stored variants, ranked best-logo-first"
+  logoVariants: [LogoVariant!]
+}
+
+# operations ---------------------------------------------------------------
+
+type WarmerConfig @aws_iam @aws_lambda {
+  enabled: Boolean!
+  concurrency: Int!
+  updatedAt: AWSDateTime
+  updatedBy: String
+}
+
+"Unread in-app bell item. href is a SPA path."
+type AppNotification @aws_iam @aws_lambda {
+  id: ID!
+  title: String!
+  body: String
+  href: String!
+  createdAt: AWSDateTime!
+}
+
+# example domain -----------------------------------------------------------
+# One entity exercising every platform path. Replace with your domain.
+
+"DRAFT: created by an assistant, awaiting review (hidden from default reads). ACTIVE / ARCHIVED: live. REJECTED: a declined draft, kept for audit, hidden."
+enum ItemStatus { DRAFT ACTIVE ARCHIVED REJECTED }
+
+type Item @aws_iam @aws_lambda {
+  id: ID!
+  "The upstream system's id, when synced. Never a key."
+  externalId: String
+  name: String!
+  category: String
+  status: ItemStatus!
+  description: String
+  "Domain; resolve a logo through fetchLogos."
+  website: String
+  owner: User
+  "NULL = visible to everyone; else only that roster role (and admins)."
+  visibilityRole: Role
+  source: String
+  syncedAt: AWSDateTime
+  "Last successful push to the Glean Indexing API."
+  indexedAt: AWSDateTime
+  "Review audit for a row that was a DRAFT: when, and who approved or rejected it."
+  reviewedAt: AWSDateTime
+  reviewedBy: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type ItemConnection @aws_iam @aws_lambda { items: [Item!]! total: Int! }
+
+input ItemFilter {
+  search: String
+  "Default reads return ACTIVE and ARCHIVED only; name DRAFT or REJECTED explicitly to see them."
+  status: [ItemStatus!]
+  category: [String!]
+  ownerId: ID
+  "The review queue: only DRAFT rows. Overrides status."
+  draftsOnly: Boolean
+}
+
+input ItemInput {
+  name: String
+  category: String
+  description: String
+  website: String
+  ownerUserId: ID
+  visibilityRole: Role
+  status: ItemStatus
+}
+
+"One run of the Hub -> Glean indexing worker."
+type IndexRun @aws_iam @aws_lambda {
+  id: ID!
+  type: String!
+  status: String!
+  startedAt: AWSDateTime!
+  completedAt: AWSDateTime
+  processed: Int
+}
+
+# root ---------------------------------------------------------------------
+
+type Query @aws_iam @aws_lambda {
+  "The signed-in caller. Records an access request when the caller is off-roster."
+  me: User
+  user(id: ID!): User
+  users(search: String, activeOnly: Boolean = true, limit: Int = 50, offset: Int): UserConnection!
+
+  "Admin: the access roster."
+  accessRoster: [RosterMember!]!
+  "Admin: off-roster sign-ins awaiting a decision."
+  accessRequests: [AccessRequest!]!
+  "Admin: interactive sign-in audit."
+  loginActivity(search: String, from: AWSDateTime, to: AWSDateTime, limit: Int = 50, offset: Int): LoginEventConnection!
+
+  "Admin: service credentials."
+  apiKeys: [ApiKey!]!
+
+  gleanConnection: GleanConnection!
+
+  fetchLogos(domains: [String!]!): [DomainLogo!]!
+
+  notifications(limit: Int = 20): [AppNotification!]!
+  "Admin: keep-alive warmer settings."
+  warmerConfig: WarmerConfig!
+
+  # example domain
+  items(filter: ItemFilter, limit: Int = 50, offset: Int): ItemConnection!
+  item(id: ID!): Item
+  itemCategories: [String!]!
+  "Admin: recent Glean indexing runs."
+  gleanIndexRuns(limit: Int = 20): [IndexRun!]!
+}
+
+type Mutation @aws_iam @aws_lambda {
+  "Caller-self: append one sign-in audit row (once per completed Cognito sign-in)."
+  recordLogin(userAgent: String): Boolean!
+  markNotificationRead(id: ID!): Boolean!
+
+  "Admin: grant or change a member's role and admin flag."
+  updateRosterMember(email: String!, role: Role!, isAdmin: Boolean): RosterMember!
+  "Admin: remove a member from the roster."
+  removeRosterMember(email: String!): Boolean!
+  "Admin: dismiss an off-roster sign-in."
+  denyAccessRequest(email: String!): Boolean!
+
+  "Admin: mint a service credential; the secret is returned exactly once."
+  createApiKey(input: CreateApiKeyInput!): CreateApiKeyResult!
+  revokeApiKey(id: ID!): ApiKey!
+  deleteApiKey(id: ID!): Boolean!
+
+  "Caller-self: start the Glean OAuth connect flow; returns the authorize URL."
+  gleanBeginConnect(redirectUri: String!): GleanConnectUrl!
+  gleanCompleteConnect(code: String!, state: String!): GleanConnection!
+  gleanDisconnect: GleanConnection!
+  "Admin: switch the shared Glean tenant base URL."
+  gleanSetEndpoint(baseUrl: String!): GleanConnection!
+
+  setWarmerConfig(enabled: Boolean, concurrency: Int): WarmerConfig!
+
+  # example domain (write access: administrator or editor)
+  "Creates an ACTIVE item. Assistant-initiated creates go through the MCP tool and land as DRAFT instead."
+  createItem(input: ItemInput!): Item!
+  updateItem(id: ID!, input: ItemInput!): Item!
+  archiveItem(id: ID!): Item!
+  "Publish a DRAFT (-> ACTIVE). A non-DRAFT id is returned unchanged."
+  approveItem(id: ID!): Item!
+  "Decline a DRAFT (-> REJECTED, hidden, kept for audit). A non-DRAFT id is returned unchanged."
+  rejectItem(id: ID!): Item!
+  "Admin: run a full re-index of items into the Glean datasource (async)."
+  triggerGleanIndex(full: Boolean = true): Boolean!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}

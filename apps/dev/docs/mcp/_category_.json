@@ -1,0 +1,8 @@
+{
+  "label": "Glean integration",
+  "position": 3,
+  "link": {
+    "type": "doc",
+    "id": "mcp/overview"
+  }
+}

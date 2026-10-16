@@ -15,12 +15,14 @@ locals {
 }
 
 # Cognito issuer + SPA client id: the JWT path validates ID tokens with the
-# audience pinned to the SPA client.
+# audience pinned to the SPA client. The MCP resource identifier additionally
+# admits OAuth access tokens scoped <identifier>/read|write.
 dependency "cognito" {
   config_path = "../../infra/cognito"
   mock_outputs = {
-    issuer_url    = "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_EXAMPLE"
-    app_client_id = "example-client-id"
+    issuer_url              = "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_EXAMPLE"
+    app_client_id           = "example-client-id"
+    mcp_resource_identifier = "https://mcp.example.portal.example.com"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "init", "plan"]
 }
@@ -39,8 +41,11 @@ inputs = {
   name       = "${local.project}-authorizer-${local.env}"
   source_dir = "${local.repo_root}/backend/dist/authorizer"
 
-  cognito_issuer    = dependency.cognito.outputs.issuer_url
-  cognito_client_id = dependency.cognito.outputs.app_client_id
+  cognito_issuer       = dependency.cognito.outputs.issuer_url
+  cognito_client_id    = dependency.cognito.outputs.app_client_id
+  cognito_mcp_resource = dependency.cognito.outputs.mcp_resource_identifier
+
+  allowed_email_domains = local.env_vars.locals.allowed_email_domains
 
   ddb_table_prefix   = dependency.dynamodb.outputs.name_prefix
   api_keys_table_arn = dependency.dynamodb.outputs.table_arns["api_keys"]

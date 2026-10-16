@@ -1,0 +1,50 @@
+---
+id: intro
+title: Developer Portal
+sidebar_label: Overview
+sidebar_position: 1
+slug: /
+---
+
+# Developer Portal
+
+This portal is a reference implementation of a custom data hub on AWS that is
+connected to Glean in both directions. Three programmatic surfaces sit over the
+same data:
+
+- **[GraphQL API](./graphql/overview.md)**: the complete read/write surface the
+  web app runs on. Build UIs, scripts, and backend integrations against it.
+- **[MCP server](./mcp/overview.md)**: a Model Context Protocol server that
+  gives Glean (or any MCP host) grounded, guard-railed access to live records.
+  This is the **Hub → Glean, federated** path: Glean reads the hub at query time.
+- **[Indexing push](./mcp/indexing.md)**: a scheduled worker that pushes records
+  into a custom Glean datasource through the Indexing API. This is the
+  **Hub → Glean, indexed** path: records appear in Glean search.
+
+The **Glean → Hub** direction is the web app's own Glean connection: each user
+authorizes the portal once (OAuth 2.1 + PKCE), after which the portal can call
+Glean chat and people data as that user.
+
+## Which surface should I use?
+
+| Goal | Surface |
+|---|---|
+| Build a UI, script, or backend integration over hub data | **GraphQL** |
+| Let an assistant answer questions about live records, or make an approved change | **MCP** |
+| Make hub records searchable inside Glean, with Glean's own permissions | **Indexing push** |
+| Bring Glean knowledge into the hub for a signed-in user | **Glean connection** (web app) |
+
+## Endpoints
+
+Every environment has one public hostname and two white-label API hostnames in
+the same DNS zone. Replace `<env>` and `<domain_root>` with your values from
+`live/<env>/env.hcl`:
+
+| Surface | Hostname |
+|---|---|
+| Web app + this portal | `https://<env>.<domain_root>/portal/`, `https://<env>.<domain_root>/dev/` |
+| GraphQL | `https://gql.<env>.<domain_root>/graphql` |
+| MCP | `https://mcp.<env>.<domain_root>/mcp` |
+
+The GraphQL **[Sandbox](/graphql-sandbox)** in this portal is already pointed at
+this environment's endpoint and forwards your session token.

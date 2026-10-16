@@ -25,7 +25,6 @@ variable "project" {
   description = "Resource name prefix. Derives the role name and the S3 / DynamoDB prefixes CI may manage when those are not set explicitly."
 }
 variable "state_bucket_arn" { type = string }
-variable "lock_table_arn" { type = string }
 
 variable "role_name" {
   type        = string

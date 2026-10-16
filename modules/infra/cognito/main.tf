@@ -346,7 +346,7 @@ resource "aws_cognito_resource_server" "mcp" {
 
   scope {
     scope_name        = "write"
-    scope_description = "Create and update activities, mappings, and outreach"
+    scope_description = "Create and update portal data"
   }
 }
 
