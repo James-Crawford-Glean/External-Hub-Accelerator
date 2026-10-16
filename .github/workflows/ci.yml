@@ -31,6 +31,7 @@ jobs:
           curl -fsSL -o /usr/local/bin/terragrunt \
             https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
           chmod +x /usr/local/bin/terragrunt
+          sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Sanitization guard
         run: scripts/check-sanitized.sh
       - name: Format
@@ -42,4 +43,4 @@ jobs:
       - name: Validate stacks
         run: terragrunt hcl validate --inputs --working-dir live
       - name: Edge handler tests
-        run: pip install -q pytest && python -m pytest -q modules/app/s3-cloudfront-spa/edge
+        run: python3 -m pip install -q pytest && python3 -m pytest -q modules/app/s3-cloudfront-spa/edge
