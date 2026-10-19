@@ -5,8 +5,8 @@
 // long-lived process — revisit if the method surface grows.
 import { listTools, toolByName, PORTAL_NAME, type ToolContext, type ToolResponseMetadata, type ToolResult } from './tools';
 import { validateArguments } from './validate';
+import { negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from './protocol';
 
-const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: `${PORTAL_NAME.toLowerCase()}-mcp`, version: '0.1.0' } as const;
 // Sent as `instructions` on initialize: the server-level scope statement a host
 // weighs when deciding whether this server owns a prompt. Positive scope first,
@@ -113,7 +113,7 @@ export async function handleRpc(req: JsonRpcRequest, ctx: ToolContext): Promise<
   switch (req.method) {
     case 'initialize':
       return ok(req.id, {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: negotiateProtocolVersion(req.params?.protocolVersion),
         serverInfo: SERVER_INFO,
         capabilities: { tools: { listChanged: false } },
         instructions: SERVER_DESCRIPTION,
@@ -189,3 +189,14 @@ export async function handleRpc(req: JsonRpcRequest, ctx: ToolContext): Promise<
 }
 
 export const PARSE_ERROR_CODE = RPC.ParseError;
+
+/** The JSON-RPC error body for a request whose MCP-Protocol-Version header names a
+ *  version this server does not speak; the transport answers it with HTTP 400. */
+export function unsupportedProtocolVersion(id: JsonRpcId | undefined, received: string): JsonRpcResponse {
+  return fail(
+    id,
+    RPC.InvalidRequest,
+    `unsupported MCP-Protocol-Version "${received}"; this server supports ${SUPPORTED_PROTOCOL_VERSIONS.join(', ')}`,
+    { supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS },
+  );
+}

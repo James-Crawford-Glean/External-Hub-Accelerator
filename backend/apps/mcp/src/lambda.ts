@@ -9,7 +9,8 @@
 // the bearer ourselves so we can answer 401 + WWW-Authenticate, which the gateway's
 // fixed 403 cannot, and serve the OAuth discovery / registration endpoints MCP hosts
 // need before they hold a token.
-import { handleRpc, type JsonRpcRequest } from './mcp/server';
+import { handleRpc, unsupportedProtocolVersion, type JsonRpcRequest } from './mcp/server';
+import { checkProtocolVersionHeader } from './mcp/protocol';
 import { handleLogoRequest } from './logo-route';
 import { authz, credentials, logos, oauth, poolClients } from './container';
 import type { Identity } from '@libs/authz';
@@ -196,6 +197,13 @@ export async function route(event: ProxyEvent, deps: RouteDeps = defaultDeps()):
     req = JSON.parse(readBody(event)) as JsonRpcRequest;
   } catch {
     return json(200, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } });
+  }
+
+  // The header carries the version negotiated at initialize; initialize itself
+  // negotiates through its params, so the header is only checked after it.
+  if (req?.method !== 'initialize') {
+    const version = checkProtocolVersionHeader(event.headers);
+    if (!version.ok) return json(400, unsupportedProtocolVersion(req?.id, version.received));
   }
 
   const response = await handleRpc(req, { identity });

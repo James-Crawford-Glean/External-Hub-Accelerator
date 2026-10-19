@@ -48,6 +48,28 @@ flowchart LR
 The Lambda is stateless and the transport is request/response, so there is no
 long-lived session to manage; one request in, one response out.
 
+### Protocol version
+
+`SUPPORTED_PROTOCOL_VERSIONS` in `apps/mcp/src/mcp/protocol.ts` lists what
+the server speaks, newest first: `2025-06-18`, `2025-03-26`. Negotiation
+follows the specification's lifecycle rules:
+
+- `initialize` returns the client's `protocolVersion` when it is in the set,
+  otherwise the newest supported version, and the client decides whether to
+  continue. A proposal the server has never heard of (a later revision, a
+  draft) therefore gets a downgrade offer rather than an error.
+- Every later request carries the negotiated version as the
+  `MCP-Protocol-Version` header. A value outside the set is answered `400`
+  with a JSON-RPC `-32600` error whose message and `data.supportedProtocolVersions`
+  name the set. A missing header is read as `2025-03-26`, the compatibility
+  default the specification prescribes for a server that cannot otherwise
+  tell; the server's behaviour is the same at either version, because it never
+  accepted JSON-RPC batches and its structured tool output is additive.
+
+Adding a revision is one entry in the constant once its behavioural
+differences have been checked against this server; `protocol.spec.ts` pins
+the set, the match and downgrade cases, and the header rejection.
+
 ## Tool catalog
 
 The platform ships five tools. Two are the platform's own; three belong to the
