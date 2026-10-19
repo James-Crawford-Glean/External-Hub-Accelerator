@@ -90,7 +90,7 @@ sequenceDiagram
   Host->>User: Confirm: archive Northwind Traders (itm_…)?
   User->>Host: Yes
   Host->>MCP: updateItem { id, status: ARCHIVED }
-  MCP->>R: requireWrite(identity); canAccess(visibility)
+  MCP->>R: requireWrite(identity), canAccess(visibility)
   R->>DB: UPDATE … RETURNING
   MCP-->>Host: record + _meta.portal.status = success
 ```
