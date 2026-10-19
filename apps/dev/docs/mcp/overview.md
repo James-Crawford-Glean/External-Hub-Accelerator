@@ -135,3 +135,7 @@ imports `tools/list` as a snapshot and does not re-poll; after adding or
 renaming a tool, re-sync the connection. Per-tool availability is set
 separately for Chat, Agents, and the Glean MCP Server surface, and can be
 scoped to users or groups.
+
+Glean Chat reaches the tools through a skill. [Skill authoring](skill-authoring.md)
+covers what Glean reads to pick a tool, the routing mistakes to design against,
+and the skill that ships with the example domain.
