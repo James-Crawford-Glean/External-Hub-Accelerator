@@ -88,7 +88,7 @@ jobs:
       - name: Install Terragrunt
         run: |
           curl -fsSL -o /usr/local/bin/terragrunt \
-            https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+            "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64"
           chmod +x /usr/local/bin/terragrunt
           terragrunt --version
 
@@ -113,15 +113,17 @@ jobs:
 
       - name: terragrunt apply
         working-directory: live/${{ inputs.env }}
+        env:
+          STACK: ${{ inputs.stack }}
         run: |
-          if [[ "${{ inputs.stack }}" == "all" ]]; then
+          if [[ "$STACK" == "all" ]]; then
             terragrunt --non-interactive run --all apply
           else
-            if [[ "${{ inputs.stack }}" == app/* ]]; then
-              echo "Preflight: applying data-pipeline/aurora-migrate (idempotent) before '${{ inputs.stack }}'."
+            if [[ "$STACK" == app/* ]]; then
+              echo "Preflight: applying data-pipeline/aurora-migrate (idempotent) before '$STACK'."
               (cd data-pipeline/aurora-migrate && terragrunt --non-interactive run -- apply -auto-approve -input=false)
             fi
-            cd "${{ inputs.stack }}"
+            cd "$STACK"
             terragrunt --non-interactive run -- apply -auto-approve -input=false
           fi
 
