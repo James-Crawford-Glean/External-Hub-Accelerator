@@ -59,8 +59,9 @@ function fakePool(existing: PoolClient[] = []): UserPoolClients & { created: Cre
 describe('registerClient', () => {
   it('mints a confidential client for Glean and echoes RFC 7591 metadata', async () => {
     const pool = fakePool();
-    const resp = await registerClient(gleanRequest(), { cfg, clients: pool });
+    const { response: resp, reused } = await registerClient(gleanRequest(), { cfg, clients: pool });
 
+    expect(reused).toBe(false);
     expect(resp).toMatchObject({
       client_id: 'client-1',
       client_secret: 'secret-1',
@@ -82,8 +83,10 @@ describe('registerClient', () => {
     const pool = fakePool();
     const first = await registerClient(gleanRequest(), { cfg, clients: pool });
     const second = await registerClient(gleanRequest(), { cfg, clients: pool });
-    expect(second.client_id).toBe(first.client_id);
-    expect(second.client_secret).toBe(first.client_secret);
+    expect(second.response.client_id).toBe(first.response.client_id);
+    expect(second.response.client_secret).toBe(first.response.client_secret);
+    expect(first.reused).toBe(false);
+    expect(second.reused).toBe(true);
     expect(pool.created).toHaveLength(1);
   });
 
@@ -96,7 +99,7 @@ describe('registerClient', () => {
 
   it('issues a public client (no secret) for token_endpoint_auth_method none', async () => {
     const pool = fakePool();
-    const resp = await registerClient(
+    const { response: resp } = await registerClient(
       { client_name: 'debugger', redirect_uris: ['http://localhost:8080/callback'], token_endpoint_auth_method: 'none' },
       { cfg, clients: pool },
     );
@@ -105,7 +108,7 @@ describe('registerClient', () => {
   });
 
   it('defaults to client_secret_basic and a generic name when the request omits them', async () => {
-    const resp = await registerClient({ redirect_uris: [GLEAN_CALLBACK] }, { cfg, clients: fakePool() });
+    const { response: resp } = await registerClient({ redirect_uris: [GLEAN_CALLBACK] }, { cfg, clients: fakePool() });
     expect(resp.token_endpoint_auth_method).toBe('client_secret_basic');
     expect(resp.client_name).toBe('MCP client');
   });

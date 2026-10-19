@@ -244,10 +244,37 @@ resource "aws_apigatewayv2_route" "oauth_open" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
+# Stage access log: the only record of requests the Lambda never sees (gateway
+# authorizer 403s, /register 429s, malformed routes), so the Discover, Register,
+# and Authorize stages of a host rollout can be read from one place.
+resource "aws_cloudwatch_log_group" "access" {
+  name              = "/aws/apigateway/${var.name}-access"
+  retention_in_days = var.log_retention_days
+}
+
 resource "aws_apigatewayv2_stage" "this" {
   api_id      = aws_apigatewayv2_api.this.id
   name        = var.stage_name
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.access.arn
+    format = jsonencode({
+      requestId          = "$context.requestId"
+      requestTime        = "$context.requestTime"
+      httpMethod         = "$context.httpMethod"
+      routeKey           = "$context.routeKey"
+      path               = "$context.path"
+      status             = "$context.status"
+      sourceIp           = "$context.identity.sourceIp"
+      userAgent          = "$context.identity.userAgent"
+      integrationStatus  = "$context.integrationStatus"
+      integrationLatency = "$context.integrationLatency"
+      responseLatency    = "$context.responseLatency"
+      authorizerError    = "$context.authorizer.error"
+      errorMessage       = "$context.error.message"
+    })
+  }
 
   # /register mints Cognito app clients; throttle it so a scanner cannot fill
   # the pool's client quota.

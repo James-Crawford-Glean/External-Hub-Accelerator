@@ -18,6 +18,7 @@ import type { OAuthConfig } from './auth/config';
 import { authorizationServerMetadata, metadataKind, protectedResourceMetadata, REGISTRATION_PATH } from './auth/metadata';
 import { registerClient, RegistrationError, type UserPoolClients } from './auth/register';
 import { bearerFrom, unauthorized } from './auth/http';
+import { authMethodOf, classifyDenial, emitAudit, registrationSummary, type RegisterEvent } from './auth/audit';
 
 // Accepts both API Gateway HTTP API (v2) and REST proxy event shapes.
 interface ProxyEvent {
@@ -121,17 +122,28 @@ async function routeOAuth(method: string, path: string, event: ProxyEvent, deps:
   if (method === 'GET' && kind === 'as') return json(200, authorizationServerMetadata(cfg));
   if (method === 'GET' && kind === 'prm') return json(200, protectedResourceMetadata(cfg));
   if (path === REGISTRATION_PATH || path.endsWith(REGISTRATION_PATH)) {
-    if (method !== 'POST') return json(405, { error: 'method not allowed' });
+    const registered = (status: number, outcome: RegisterEvent['outcome'], body: unknown, error?: string): void =>
+      emitAudit({ msg: 'mcp.register', status, outcome, ...registrationSummary(body), ...(error ? { error } : {}) });
+    if (method !== 'POST') {
+      registered(405, 'method_not_allowed', null);
+      return json(405, { error: 'method not allowed' });
+    }
     let body: unknown;
     try {
       body = JSON.parse(readBody(event) || '{}');
     } catch {
+      registered(400, 'invalid_json', null, 'invalid_client_metadata');
       return json(400, { error: 'invalid_client_metadata', error_description: 'body is not valid JSON' });
     }
     try {
-      return json(201, await registerClient(body, { cfg, clients: deps.poolClients() }));
+      const { response, reused } = await registerClient(body, { cfg, clients: deps.poolClients() });
+      registered(201, reused ? 'reused' : 'created', body);
+      return json(201, response);
     } catch (e) {
-      if (e instanceof RegistrationError) return json(400, { error: e.code, error_description: e.description });
+      if (e instanceof RegistrationError) {
+        registered(400, 'rejected', body, e.code);
+        return json(400, { error: e.code, error_description: e.description });
+      }
       throw e;
     }
   }
@@ -150,7 +162,10 @@ export async function route(event: ProxyEvent, deps: RouteDeps = defaultDeps()):
   if (open) return open;
 
   const ctx = await principalContext(event, deps);
-  if (ctx === null && deps.oauth) return unauthorized(deps.oauth);
+  if (ctx === null && deps.oauth) {
+    emitAudit({ msg: 'mcp.denied', status: 401, method, path, ...classifyDenial(bearerFrom(event.headers), deps.oauth) });
+    return unauthorized(deps.oauth);
+  }
   const identity = identityFrom(event, ctx ?? {});
 
   if (method === 'GET' && path.endsWith('/logos')) {
@@ -159,6 +174,17 @@ export async function route(event: ProxyEvent, deps: RouteDeps = defaultDeps()):
       authz: authz(),
       cdnOrigin: process.env.LOGO_CDN_ORIGIN ?? '',
     });
+    if (result.statusCode === 403) {
+      emitAudit({
+        msg: 'mcp.denied',
+        status: 403,
+        method,
+        path,
+        reason: 'read_scope_required',
+        authMethod: authMethodOf(bearerFrom(event.headers)),
+        ...(identity.kind ? { principal: identity.kind } : {}),
+      });
+    }
     return result;
   }
   if (method !== 'POST') {

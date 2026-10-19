@@ -162,6 +162,7 @@ export async function handleRpc(req: JsonRpcRequest, ctx: ToolContext): Promise<
         );
         return ok(req.id, result);
       } catch (e) {
+        const status = e instanceof Error && e.name === 'Unauthorized' ? 'authorization_error' : 'server_failure';
         console.log(
           JSON.stringify({
             msg: 'mcp.tools_call',
@@ -169,13 +170,14 @@ export async function handleRpc(req: JsonRpcRequest, ctx: ToolContext): Promise<
             id: req.id ?? null,
             ms: Date.now() - started,
             rpcError: true,
+            status,
           }),
         );
         const message = e instanceof Error ? e.message : 'tool execution failed';
         return fail(req.id, RPC.Internal, message, {
           source: PORTAL_NAME,
           retrievedAt: new Date().toISOString(),
-          status: e instanceof Error && e.name === 'Unauthorized' ? 'authorization_error' : 'server_failure',
+          status,
           summary: message,
         } satisfies ToolResponseMetadata);
       }
