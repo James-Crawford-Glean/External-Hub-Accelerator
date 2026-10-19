@@ -141,7 +141,7 @@ describe('MCP auth-path audit lines', () => {
   });
 
   it('logs nothing on a verified bearer', async () => {
-    const res = await route(post('/mcp', { jsonrpc: '2.0', id: 1, method: 'tools/list' }, { authorization: `Bearer ${VALID_TOKEN}` }), deps());
+    const res = await route(post('/mcp', { jsonrpc: '2.0', id: 1, method: 'ping' }, { authorization: `Bearer ${VALID_TOKEN}` }), deps());
     expect(res.statusCode).toBe(200);
     expect(audit('mcp.denied')).toEqual([]);
     expect(audit('mcp.register')).toEqual([]);

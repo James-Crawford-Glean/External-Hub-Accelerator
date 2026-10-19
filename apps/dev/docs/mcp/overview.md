@@ -141,6 +141,12 @@ renaming a tool, re-sync the connection. Per-tool availability is set
 separately for Chat, Agents, and the Glean MCP Server surface, and can be
 scoped to users or groups.
 
+Because the snapshot is taken with one credential, that credential decides
+which tools Glean ever sees: `tools/list` omits write tools for a caller who
+cannot write ([The catalog matches the caller](design.md#the-catalog-matches-the-caller)).
+Import with a connection that can write, or set `MCP_CATALOG_FILTER=off` on the
+Lambda, if Glean users should be offered `createItem` and `updateItem`.
+
 Glean Chat reaches the tools through a skill. [Skill authoring](skill-authoring.md)
 covers what Glean reads to pick a tool, the routing mistakes to design against,
 and the skill that ships with the example domain.

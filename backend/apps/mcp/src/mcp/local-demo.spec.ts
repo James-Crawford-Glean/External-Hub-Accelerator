@@ -10,11 +10,20 @@ describe('MCP server end to end (pglite)', () => {
     pg = await pgAurora();
     setAuroraForLocal(pg.aurora);
     await pg.exec("INSERT INTO app.access_roster (email, role, is_admin) VALUES ('ops@example.com', 'EDITOR', false)");
+    await pg.exec("INSERT INTO app.access_roster (email, role, is_admin) VALUES ('viewer@example.com', 'VIEWER', false)");
     await pg.exec("INSERT INTO app.users (id, email, name, title) VALUES ('usr_00000000000001', 'ops@example.com', 'Ola Ops', 'Operations')");
   });
   afterAll(() => pg.close());
 
   const user = { kind: 'user', email: 'ops@example.com', sub: 'sub-ops' };
+  const viewer = { kind: 'user', email: 'viewer@example.com', sub: 'sub-viewer' };
+  const readKey = { kind: 'apiKey', keyId: 'apk_read', scopes: 'read', email: null, sub: null };
+  const writeKey = { kind: 'apiKey', keyId: 'apk_write', scopes: 'read,write', email: null, sub: null };
+
+  const catalogFor = async (identity: Record<string, unknown>, id: number) => {
+    const res = await handleRpc({ jsonrpc: '2.0', id, method: 'tools/list' }, { identity });
+    return (res?.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name).sort();
+  };
 
   it('initialize advertises tools and the server description', async () => {
     const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'initialize' }, { identity: user });
@@ -27,6 +36,15 @@ describe('MCP server end to end (pglite)', () => {
     const tools = (res?.result as { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> }).tools;
     expect(tools.map((t) => t.name)).toEqual(expect.arrayContaining(['whoAmI', 'listUsers']));
     expect(tools.every((t) => typeof t.annotations.readOnlyHint === 'boolean')).toBe(true);
+  });
+
+  it('tools/list matches the caller: an editor sees every tool, a viewer and a read-scoped key see reads only', async () => {
+    const reads = ['listUsers', 'searchItems', 'whoAmI'];
+    const all = ['createItem', ...reads, 'updateItem'].sort();
+    expect(await catalogFor(user, 20)).toEqual(all);
+    expect(await catalogFor(viewer, 21)).toEqual(reads);
+    expect(await catalogFor(readKey, 22)).toEqual(reads);
+    expect(await catalogFor(writeKey, 23)).toEqual(all);
   });
 
   it('whoAmI resolves the roster role and write capability', async () => {
