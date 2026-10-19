@@ -27,6 +27,16 @@ output "function_name" {
   value = aws_lambda_function.mcp.function_name
 }
 
+output "access_log_group_name" {
+  description = "CloudWatch log group receiving the HTTP API stage access log (one JSON line per request)."
+  value       = aws_cloudwatch_log_group.access.name
+}
+
+output "lambda_log_group_name" {
+  description = "CloudWatch log group for the MCP Lambda (mcp.register, mcp.denied, mcp.tools_call lines)."
+  value       = aws_cloudwatch_log_group.lambda.name
+}
+
 output "function_arn" {
   value = aws_lambda_function.mcp.arn
 }

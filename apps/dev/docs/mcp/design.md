@@ -212,6 +212,47 @@ undeclared argument is still a violation.
 - `/register` is rate-limited at the stage so a scanner cannot fill the user
   pool's app-client quota.
 
+## What is logged
+
+Two CloudWatch log groups, both with the module's `log_retention_days`
+(outputs `access_log_group_name` and `lambda_log_group_name`). Together they
+make every stage of a host's first connection (Discover, Register, Authorize,
+List tools, Call tool) readable from the server side.
+
+**Stage access log** (`/aws/apigateway/<name>-access`), one JSON object per
+request: `requestId`, `requestTime`, `httpMethod`, `routeKey`, `path`,
+`status`, `sourceIp`, `userAgent`, `integrationStatus`, `integrationLatency`,
+`responseLatency`, `authorizerError`, `errorMessage`. It is the only record of
+requests the Lambda never sees: a gateway-authorizer `403` on a bad key, a
+`429` from the `/register` throttle, a `404` for a route that does not exist.
+The `requestId` matches the `x-amzn-RequestId` response header a host can quote.
+
+**Lambda log** (`/aws/lambda/<name>`), one JSON line per decision:
+
+| `msg` | When | Fields |
+|---|---|---|
+| `mcp.register` | every `/register` response | `status`, `outcome` (`created`, `reused`, `rejected`, `invalid_json`, `method_not_allowed`), `clientName`, `redirectHosts` (distinct hostnames requested), `error` (RFC 7591 code) on a rejection |
+| `mcp.denied` | every `401` and `403` the Lambda issues | `status`, `method`, `path`, `reason`, `authMethod`, `principal` (403 only) |
+| `mcp.tools_call` | every `tools/call` | `name`, `id`, `ms`, `isError`; `invalidArguments: true` on a `-32602`; `rpcError: true` with `status` (`authorization_error` or `server_failure`) when the handler threw |
+
+`reason` on a `401` is derived from the bearer's shape and its unverified
+claims, never from token contents: `no_bearer`, `api_key_rejected` (a `psk_`
+key reached the Lambda, which cannot resolve keys; in the OAuth-only
+configuration keys are never accepted), `token_malformed`, `token_expired`,
+`issuer_mismatch`, `audience_mismatch` (an access token minted for another
+resource), or `token_rejected` (signature or claim check failed in the
+verifier). `authMethod` is `none`, `api_key`, `oauth_access_token`,
+`id_token`, `jwt`, or `unknown`. The `403` reason today is
+`read_scope_required` on `GET /logos`. A refusal inside a tool (`requireWrite`,
+row visibility) is not an HTTP `403`; it is the `tools/call` line with
+`status: authorization_error`, and the host receives the JSON-RPC error with the
+same status in its envelope.
+
+Nothing in either log carries a token, a secret, or an email. `clientName` is
+the free text a registrant chose. A throttled `/register` never reaches the
+Lambda, so "rate limited" is read from the access log's `429`, not from
+`mcp.register`.
+
 ## Adding a tool
 
 Write `backend/apps/mcp/src/tools/<name>.ts` exporting a `ToolDefinition`:

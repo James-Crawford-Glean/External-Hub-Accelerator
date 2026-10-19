@@ -82,14 +82,21 @@ interface Deps {
   now?: () => number;
 }
 
-export async function registerClient(body: unknown, deps: Deps): Promise<RegistrationResponse> {
+export interface RegistrationResult {
+  response: RegistrationResponse;
+  /** True when the registration tuple matched an existing app client and no client was minted. */
+  reused: boolean;
+}
+
+export async function registerClient(body: unknown, deps: Deps): Promise<RegistrationResult> {
   const req = parseRequest(body, deps.cfg);
   const clientName = cognitoClientName(req);
   const scopes = ['openid', 'email', ...resourceScopeIdentifiers(deps.cfg)];
 
   const existing = (await deps.clients.list()).find((c) => c.clientName === clientName);
+  const described = existing ? await deps.clients.describe(existing.clientId) : null;
   const client =
-    (existing && (await deps.clients.describe(existing.clientId))) ??
+    described ??
     (await deps.clients.create({
       clientName,
       callbackUrls: req.redirectUris,
@@ -99,15 +106,18 @@ export async function registerClient(body: unknown, deps: Deps): Promise<Registr
 
   const issuedAt = Math.floor((client.createdAt?.getTime() ?? (deps.now ?? Date.now)()) / 1000);
   return {
-    client_id: client.clientId,
-    ...(client.clientSecret ? { client_secret: client.clientSecret, client_secret_expires_at: 0 } : {}),
-    client_id_issued_at: issuedAt,
-    client_name: req.clientName,
-    redirect_uris: req.redirectUris,
-    grant_types: [...GRANT_TYPES],
-    response_types: ['code'],
-    token_endpoint_auth_method: req.authMethod,
-    scope: scopes.join(' '),
+    reused: described !== null,
+    response: {
+      client_id: client.clientId,
+      ...(client.clientSecret ? { client_secret: client.clientSecret, client_secret_expires_at: 0 } : {}),
+      client_id_issued_at: issuedAt,
+      client_name: req.clientName,
+      redirect_uris: req.redirectUris,
+      grant_types: [...GRANT_TYPES],
+      response_types: ['code'],
+      token_endpoint_auth_method: req.authMethod,
+      scope: scopes.join(' '),
+    },
   };
 }
 
