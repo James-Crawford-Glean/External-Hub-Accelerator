@@ -9,7 +9,8 @@ sidebar_position: 3
 
 The live catalog is `tools/list`; this page describes each tool's contract and
 the behaviour a host should expect. Inputs are JSON Schema with
-`additionalProperties: false`.
+`additionalProperties: false`. A caller who cannot write is served the three
+read tools only ([The catalog matches the caller](design.md#the-catalog-matches-the-caller)).
 
 ## `whoAmI` (read)
 

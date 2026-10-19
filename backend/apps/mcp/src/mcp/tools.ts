@@ -85,8 +85,19 @@ export const toolByName = (name: string): ToolDefinition | undefined => {
   return TOOLS[trimmed] ?? TOOLS[bare] ?? TOOLS_BY_LOWER[trimmed.toLowerCase()] ?? TOOLS_BY_LOWER[bare.toLowerCase()];
 };
 
-export function listTools(): ToolDescriptor[] {
-  return ALL.map((t) => ({
+// When on, tools/list omits write tools for a caller who cannot write (roster role
+// without write, key without the write scope), so the catalog matches what the
+// caller can do. Off (MCP_CATALOG_FILTER=off) serves the whole catalog to everyone,
+// which a host that snapshots tools/list once for all its users may need.
+export const CATALOG_FILTERED_BY_CAPABILITY: boolean = process.env.MCP_CATALOG_FILTER !== 'off';
+
+export interface CatalogAudience {
+  readonly canWrite: boolean;
+}
+
+export function listTools(audience: CatalogAudience = { canWrite: true }): ToolDescriptor[] {
+  const visible = audience.canWrite || !CATALOG_FILTERED_BY_CAPABILITY ? ALL : ALL.filter((t) => t.annotations.readOnlyHint);
+  return visible.map((t) => ({
     name: t.name,
     description: advertisedDescription(t),
     inputSchema: t.inputSchema,

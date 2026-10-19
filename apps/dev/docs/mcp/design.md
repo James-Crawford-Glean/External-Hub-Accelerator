@@ -86,6 +86,30 @@ example domain and show the pattern for yours.
 Tool names are camelCase. Hosts may call `portal__searchitems` or `searchitems`;
 the server resolves those to the canonical name.
 
+### The catalog matches the caller
+
+`tools/list` omits the write tools when the caller cannot write: a roster role
+without write (`VIEWER`), an OAuth grant without the `write` scope, or a key
+without the `write` scope. The decision is `AuthzService.canWrite`, the same
+check `requireWrite` runs on a call, so the catalog never advertises a tool
+whose call would be refused. An editor, an administrator, and a write-scoped
+key see all five tools; everyone else sees `whoAmI`, `listUsers`, and
+`searchItems`.
+
+The filter is `CATALOG_FILTERED_BY_CAPABILITY` in `apps/mcp/src/mcp/tools.ts`,
+on by default. Set `MCP_CATALOG_FILTER=off` in the Lambda's environment
+(`env_vars` on the module) to serve the whole catalog to every caller. Turn it
+off when a host imports `tools/list` once, with one credential, and serves that
+snapshot to all of its users: Glean's admin console does this when a server is
+added (see [Making it available in Glean](overview.md#making-it-available-in-glean)),
+so if the connection used for the import cannot write, no Glean user is ever
+offered a write tool. A host that lists tools per user, as an IDE or CLI host
+does over its own OAuth grant, gets the audience-specific catalog it should.
+
+The filter changes what is advertised, not what is enforced. `tools/call` on a
+write tool by a caller who cannot write still reaches the resolver gate and is
+refused there, exactly as before.
+
 Each tool declares MCP `annotations`. Hosts gate human-in-the-loop confirmation
 on `readOnlyHint`; without it every tool gets an approval panel and the planner
 learns to avoid the server. Read tools are `READ_ONLY`; write tools are

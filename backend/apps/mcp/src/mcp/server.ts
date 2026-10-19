@@ -6,6 +6,7 @@
 import { listTools, toolByName, PORTAL_NAME, type ToolContext, type ToolResponseMetadata, type ToolResult } from './tools';
 import { validateArguments } from './validate';
 import { negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from './protocol';
+import { authz } from '../container';
 
 const SERVER_INFO = { name: `${PORTAL_NAME.toLowerCase()}-mcp`, version: '0.1.0' } as const;
 // Sent as `instructions` on initialize: the server-level scope statement a host
@@ -126,7 +127,7 @@ export async function handleRpc(req: JsonRpcRequest, ctx: ToolContext): Promise<
       return ok(req.id, {});
 
     case 'tools/list':
-      return ok(req.id, { tools: listTools() });
+      return ok(req.id, { tools: listTools({ canWrite: await authz().canWrite(ctx.identity) }) });
 
     case 'tools/call': {
       const name = typeof req.params?.name === 'string' ? req.params.name : '';

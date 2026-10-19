@@ -2,7 +2,7 @@
 // live-data provenance note, read-only tools carry the supplementary-context note,
 // and no tool is named like a generic search entry point (which would make the
 // host route unrelated prompts here).
-import { listTools, LIVE_DATA_NOTE, SUPPLEMENTARY_CONTEXT_NOTE, toolByName } from './tools';
+import { CATALOG_FILTERED_BY_CAPABILITY, listTools, LIVE_DATA_NOTE, SUPPLEMENTARY_CONTEXT_NOTE, toolByName } from './tools';
 
 describe('MCP tool-selection metadata', () => {
   const advertised = Object.fromEntries(listTools().map((t) => [t.name, t]));
@@ -27,5 +27,14 @@ describe('MCP tool-selection metadata', () => {
     expect(toolByName('portal__whoami')?.name).toBe('whoAmI');
     expect(toolByName(' WhoAmI ')?.name).toBe('whoAmI');
     expect(toolByName('nope')).toBeUndefined();
+  });
+
+  it('filters write tools out of the catalog for a caller who cannot write, and only then', () => {
+    expect(CATALOG_FILTERED_BY_CAPABILITY).toBe(true);
+    const names = (tools: ReturnType<typeof listTools>) => tools.map((t) => t.name).sort();
+    expect(names(listTools({ canWrite: false }))).toEqual(['listUsers', 'searchItems', 'whoAmI']);
+    expect(names(listTools({ canWrite: true }))).toEqual(['createItem', 'listUsers', 'searchItems', 'updateItem', 'whoAmI']);
+    expect(names(listTools())).toEqual(names(listTools({ canWrite: true })));
+    for (const t of listTools({ canWrite: false })) expect(t.annotations.readOnlyHint).toBe(true);
   });
 });
