@@ -150,3 +150,6 @@ Lambda, if Glean users should be offered `createItem` and `updateItem`.
 Glean Chat reaches the tools through a skill. [Skill authoring](skill-authoring.md)
 covers what Glean reads to pick a tool, the routing mistakes to design against,
 and the skill that ships with the example domain.
+
+The first connection from each host type, stage by stage with the log line and
+database row that proves each stage, is the [Host test matrix](host-test-matrix.md).
