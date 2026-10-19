@@ -3,7 +3,7 @@
 // with a spy handler to prove an out-of-schema call never reaches it.
 import { handleRpc } from './server';
 import { TOOLS, type ToolDefinition } from './tools';
-import { validateArguments, type JsonSchema } from './validate';
+import { HOST_INJECTED_ARGUMENTS, validateArguments, type JsonSchema } from './validate';
 
 const schema: JsonSchema = {
   type: 'object',
@@ -33,6 +33,23 @@ describe('validateArguments', () => {
   it('rejects keys the schema does not declare', () => {
     const v = validateArguments(schema, { id: 'x', bogus: 1 });
     expect(v).toEqual({ ok: false, violations: ['bogus: not an accepted argument'] });
+  });
+
+  it('drops host-injected arguments before the closed-schema check, and only those', () => {
+    expect([...HOST_INJECTED_ARGUMENTS]).toEqual(['_user_goal']);
+    expect(validateArguments(schema, { id: 'x', _user_goal: 'archive northwind' })).toEqual({ ok: true, value: { id: 'x' } });
+    expect(validateArguments(schema, { id: 'x', _user_goal: 'archive northwind', bogus: 1 })).toEqual({
+      ok: false,
+      violations: ['bogus: not an accepted argument'],
+    });
+  });
+
+  it('passes a host-injected argument through when the tool declares it', () => {
+    const declaring: JsonSchema = { ...schema, properties: { ...schema.properties, _user_goal: { type: 'string' } } };
+    expect(validateArguments(declaring, { id: 'x', _user_goal: 'archive northwind' })).toEqual({
+      ok: true,
+      value: { id: 'x', _user_goal: 'archive northwind' },
+    });
   });
 
   it('rejects a wrong type, an out-of-range number, an enum miss, and a bad array element, naming each path', () => {
@@ -98,6 +115,30 @@ describe('tools/call argument gate', () => {
       const res = await call('listUsers', { search: 'ola', limit: '5' });
       expect(handler).toHaveBeenCalledWith({ search: 'ola', limit: 5 }, { identity });
       expect(res?.error).toBeUndefined();
+    } finally {
+      handler.mockRestore();
+    }
+  });
+
+  it('a Glean-injected _user_goal on a write passes the gate and never reaches the handler', async () => {
+    const tool = TOOLS.updateItem as ToolDefinition;
+    const handler = jest.spyOn(tool, 'handler').mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], structuredContent: { record: {} } });
+    try {
+      const res = await call('updateItem', { id: 'itm_1', status: 'ARCHIVED', _user_goal: 'archive Northwind' });
+      expect(handler).toHaveBeenCalledWith({ id: 'itm_1', status: 'ARCHIVED' }, { identity });
+      expect(res?.error).toBeUndefined();
+    } finally {
+      handler.mockRestore();
+    }
+  });
+
+  it('an unknown extra argument alongside _user_goal is still a -32602', async () => {
+    const tool = TOOLS.createItem as ToolDefinition;
+    const handler = jest.spyOn(tool, 'handler');
+    try {
+      const res = await call('createItem', { name: 'Fabrikam', _user_goal: 'add Fabrikam', bogus: true });
+      expect(handler).not.toHaveBeenCalled();
+      expect(res?.error).toMatchObject({ code: -32602, data: { violations: ['bogus: not an accepted argument'] } });
     } finally {
       handler.mockRestore();
     }

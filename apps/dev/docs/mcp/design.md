@@ -194,6 +194,14 @@ can therefore trust the shape they declared; the clamps some of them keep
 (`searchItems` drops non-live statuses) are defense in depth, not the
 control. `validate.spec.ts` pins both.
 
+One exception is made before the check. Some hosts add arguments of their own
+to every `tools/call`: Glean's write-action path sends `_user_goal`, the user's
+prompt verbatim. The gate drops the names in `HOST_INJECTED_ARGUMENTS`
+(`apps/mcp/src/mcp/validate.ts`) before validating, so tools keep
+`additionalProperties: false` without declaring them and handlers never see
+them. A tool that does declare one of those names receives it. Any other
+undeclared argument is still a violation.
+
 ## Runtime constraints
 
 - Lambda timeout 25s under a 29s API Gateway ceiling, so a slow call fails

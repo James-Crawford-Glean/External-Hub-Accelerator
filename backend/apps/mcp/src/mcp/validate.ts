@@ -8,6 +8,10 @@
 // string for integer / number, "true" / "false" for boolean, a lone scalar for
 // an array) because hosts do send those; anything else is a violation.
 
+// Top-level arguments an MCP host adds to tools/call on its own (Glean's write-action
+// path sends `_user_goal`); dropped before the closed-schema check so tools never declare them.
+export const HOST_INJECTED_ARGUMENTS: ReadonlySet<string> = new Set(['_user_goal']);
+
 export interface JsonSchema {
   readonly type?: 'object' | 'string' | 'integer' | 'number' | 'boolean' | 'array';
   readonly properties?: Readonly<Record<string, JsonSchema>>;
@@ -104,12 +108,18 @@ function check(schema: JsonSchema, raw: unknown, path: string, out: string[]): u
   return value;
 }
 
+// A tool that declares a host-injected name in its own schema still receives it.
+function dropHostInjected(schema: JsonSchema, args: Record<string, unknown>): Record<string, unknown> {
+  const declared = schema.properties ?? {};
+  return Object.fromEntries(Object.entries(args).filter(([key]) => !HOST_INJECTED_ARGUMENTS.has(key) || key in declared));
+}
+
 /** Validate (and coerce) tools/call arguments against a tool's inputSchema. */
 export function validateArguments(schema: JsonSchema, args: unknown): Validation {
   if (args !== undefined && !isRecord(args)) {
     return { ok: false, violations: [`arguments: expected object, got ${describe(args)}`] };
   }
   const violations: string[] = [];
-  const value = check(schema, args ?? {}, '', violations) as Record<string, unknown>;
+  const value = check(schema, dropHostInjected(schema, args ?? {}), '', violations) as Record<string, unknown>;
   return violations.length ? { ok: false, violations } : { ok: true, value };
 }
