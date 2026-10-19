@@ -340,6 +340,10 @@ CI runs the same set on every pull request.
   to the right tool, with the routing failures the source project hit and a
   review checklist; the example skill for the shipped tools is at
   [`docs/mcp/skills/example/`](docs/mcp/skills/example/SKILL.md).
+- [Host test matrix](apps/dev/docs/mcp/host-test-matrix.md): the runbook for
+  the first end-to-end test of a deployed environment, per host type (Glean
+  Chat, Agent Builder, an IDE, the CLI), with the expected log line and row at
+  each stage from Discover to Approve.
 
 These documents refer to PartnerSync as "the source project"; this README is
 the one place the sanitization guard lets the name appear.
