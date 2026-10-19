@@ -266,15 +266,18 @@ tool"), and a schema with `additionalProperties: false` had not declared it. The
 read tool's schema used `oneOf` at the property level, which the catalog import
 accepted and the connector did not.
 
-**Fix.** Declare `_user_goal` as an optional string on every write tool and
-ignore it in the handler; keep input schemas flat (no `oneOf` at the top of a
-property).
+**Fix.** The source project declared `_user_goal` as an optional string on
+every write tool and ignored it in the handler, and flattened the schema (no
+`oneOf` at the top of a property).
 
-**Rule.** The accelerator validates arguments against the advertised schema
-before the handler runs ([The argument gate](design.md#the-argument-gate)), so
-an undeclared host argument is a `-32602`, not a silent pass. If your host
-injects fields, declare them. Confirm against your tenant with one write from
-Chat before relying on it.
+**Rule.** The accelerator handles the first case centrally: the argument gate
+drops the names in `HOST_INJECTED_ARGUMENTS` (`apps/mcp/src/mcp/validate.ts`,
+currently `_user_goal`) before validating, so tools keep
+`additionalProperties: false` without declaring them and handlers never see
+them ([The argument gate](design.md#the-argument-gate)). Any other undeclared
+argument is still a `-32602`, not a silent pass. If your host injects a
+different name, add it to that constant rather than to every tool. Keep
+schemas flat. Confirm against your tenant with one write from Chat.
 
 ### The catalog is a snapshot
 
@@ -383,9 +386,11 @@ the first reader so the second one rarely fires.
 7. **Flat schemas.** `type`, `enum`, `items`, bounds. Avoid `oneOf` and nested
    alternatives at the property level; the source project saw them pass the
    catalog import and fail at call time.
-8. **Declare what the host injects.** With `additionalProperties: false`, an
-   argument the host adds on its own (`_user_goal` on Glean write actions) must
-   be declared or the argument gate rejects the call before the handler runs.
+8. **Know what the host injects.** With `additionalProperties: false`, an
+   argument the host adds on its own would be rejected before the handler runs.
+   The argument gate drops the known names (`HOST_INJECTED_ARGUMENTS`,
+   currently `_user_goal` from Glean write actions) centrally; add a new one
+   there, not to each tool.
 9. **Distinguish look-alike fields.** When two fields are both "status", say
    which: "the account badge, not the opportunity stage; use `stages` for
    that." The model picks the first field whose name matches the prompt.
@@ -534,7 +539,8 @@ Run this against any change to a tool, a schema, or the skill before it merges.
       the handler's constant.
 - [ ] `required` contains only prompt-supplied values; no identity field.
 - [ ] Shared fields come from one shared constant.
-- [ ] No `oneOf` at property level; host-injected arguments declared.
+- [ ] No `oneOf` at property level; any new host-injected argument added to
+      `HOST_INJECTED_ARGUMENTS`, not to a tool.
 - [ ] `annotations` correct: `READ_ONLY` on reads and content tools,
       `CREATES_RECORDS` or `UPDATES_IN_PLACE` on writes.
 
