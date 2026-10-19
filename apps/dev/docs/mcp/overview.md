@@ -41,7 +41,12 @@ for a domain from the hub's logo cache, or a `302` to the CDN with
 - Method: `POST`, `Content-Type: application/json`, `Accept: application/json`
 - One JSON-RPC request object per call, one response object back; notifications
   (no `id`) are answered `202` with an empty body
-- Protocol version: `2025-06-18`
+- Protocol versions: `2025-06-18` and `2025-03-26`. `initialize` answers with
+  the client's proposed version when it is one of these, otherwise with
+  `2025-06-18`. Later requests send the negotiated version as
+  `MCP-Protocol-Version`; an unsupported value is `400` with a JSON-RPC
+  `-32600` error listing the supported set, and a missing header is read as
+  `2025-03-26`. See [Protocol version](design.md#protocol-version).
 
 ## Authentication
 
@@ -95,7 +100,7 @@ email, so a signed-in connection is never asked.
 
 | Method | Purpose |
 |---|---|
-| `initialize` | Handshake: protocol version, capabilities, `serverInfo`, and the server's scope statement as `instructions`. |
+| `initialize` | Handshake: negotiated protocol version, capabilities, `serverInfo`, and the server's scope statement as `instructions`. |
 | `notifications/initialized` | Client → server; no response. |
 | `ping` | Liveness. |
 | `tools/list` | Tools with JSON-Schema `inputSchema` and MCP `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`). |
