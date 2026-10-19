@@ -335,8 +335,13 @@ CI runs the same set on every pull request.
   Draft for internal review.
 - [Extraction plan](docs/extraction-plan.md): the record of how this
   repository was extracted from PartnerSync, increment by increment.
+- [Skill authoring](apps/dev/docs/mcp/skill-authoring.md): how to write the
+  Glean skill (`SKILL.md`) and the MCP tool descriptions so Glean Chat routes
+  to the right tool, with the routing failures the source project hit and a
+  review checklist; the example skill for the shipped tools is at
+  [`docs/mcp/skills/example/`](docs/mcp/skills/example/SKILL.md).
 
-Both documents refer to PartnerSync as "the source project"; this README is
+These documents refer to PartnerSync as "the source project"; this README is
 the one place the sanitization guard lets the name appear.
 
 ## License
