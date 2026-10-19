@@ -85,7 +85,7 @@ jobs:
         working-directory: live/${{ inputs.env }}
         run: |
           curl -fsSL -o /usr/local/bin/terragrunt \
-            https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+            "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64"
           chmod +x /usr/local/bin/terragrunt
           out() { (cd "$1" && terragrunt --non-interactive run -- output -raw "$2" 2>/dev/null) || true; }
 
