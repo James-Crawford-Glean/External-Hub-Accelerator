@@ -328,6 +328,17 @@ actionlint .github/workflows/*.yml
 
 CI runs the same set on every pull request.
 
+## Documents
+
+- [White paper](docs/white-paper.md): the architecture, the four Glean
+  surfaces, the guardrails, and how to adapt the platform to a new domain.
+  Draft for internal review.
+- [Extraction plan](docs/extraction-plan.md): the record of how this
+  repository was extracted from PartnerSync, increment by increment.
+
+Both documents refer to PartnerSync as "the source project"; this README is
+the one place the sanitization guard lets the name appear.
+
 ## License
 
 To be confirmed before publication.
