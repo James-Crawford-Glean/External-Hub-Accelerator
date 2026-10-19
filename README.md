@@ -94,7 +94,7 @@ flowchart LR
   google["Google OAuth"]
 
   subgraph edge["Single public origin"]
-    dns["Route53<br/><env>.<domain_root>"]
+    dns["Route53<br/>&lt;env&gt;.&lt;domain_root&gt;"]
     cf["CloudFront"]
     edgefn["Lambda@Edge<br/>routing only"]
     spa[("S3<br/>SPA assets + logos")]
