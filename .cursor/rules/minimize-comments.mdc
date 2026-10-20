@@ -1,0 +1,11 @@
+---
+description: Avoid redundant comments in code and config changes
+alwaysApply: true
+---
+
+# Comments and prose in diffs
+
+- Do **not** add comments that restate what the code, HCL, or YAML already says (explaining a single env var line, echoing a URL's shape, narrating obvious control flow).
+- Prefer **clear names**, **small focused functions**, and **commit/PR messages** for intent; use comments only for **non-obvious rationale**, invariants, or hazards a reader would miss.
+- Same bar for **README**, **Terraform**, and **workflow** files: factual deltas only, not tutorial noise next to self-explanatory settings.
+- The longer rule set is `AGENTS.md` (section *Comments*).
