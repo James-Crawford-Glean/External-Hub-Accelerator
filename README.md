@@ -344,6 +344,9 @@ CI runs the same set on every pull request.
   the first end-to-end test of a deployed environment, per host type (Glean
   Chat, Agent Builder, an IDE, the CLI), with the expected log line and row at
   each stage from Discover to Approve.
+- [`AGENTS.md`](AGENTS.md): the rules an AI coding agent (Cursor, Claude Code)
+  follows in this repository, with the reusable skills under
+  [`.claude/skills/`](.claude/README.md).
 
 These documents refer to PartnerSync as "the source project"; this README is
 the one place the sanitization guard lets the name appear.
