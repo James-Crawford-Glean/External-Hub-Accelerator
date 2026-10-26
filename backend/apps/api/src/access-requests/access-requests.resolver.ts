@@ -1,7 +1,6 @@
 // Query.accessRequests + Mutation.denyAccessRequest — admin review of denied
-// logins. Port of resolvers/access_requests.py. accessRequests lists glean.com
-// users who authenticated but resolved to no role (captured by users.me via
-// AccessRequestsService). Approval reuses updateRosterMember (assigning a role
+// logins. accessRequests lists allowed-domain users who authenticated but
+// resolved to no role (captured by users.me via AccessRequestsService). Approval reuses updateRosterMember (assigning a role
 // clears the request via roster.upsert); denyAccessRequest dismisses one without
 // granting.
 import { AuroraService } from '@libs/aurora';

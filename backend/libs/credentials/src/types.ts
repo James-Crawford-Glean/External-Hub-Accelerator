@@ -63,8 +63,8 @@ export interface CreateApiKeyResult {
 
 /** Human-readable meaning of each scope, for UI/consumer docs and one source of truth. */
 export const SCOPE_DESCRIPTIONS: Record<Scope, string> = {
-  read: 'Read partner, account, opportunity, mapping, and activity data.',
-  write: 'Create and modify data — partners, contacts, activities, mappings, and special pricing.',
+  read: 'Read portal records.',
+  write: 'Create and modify portal records.',
   admin: 'Administrative operations — roles & access, sync configuration, and API keys.',
 };
 

@@ -1,5 +1,5 @@
 // Query.gleanConnection / Mutation.glean* — per-user Glean OAuth (public DCR
-// client + PKCE). Port of resolvers/glean.py. Connect/status/disconnect are
+// client + PKCE). Connect/status/disconnect are
 // per-user (any signed-in caller manages their own token custody);
 // gleanSetEndpoint switches the shared tenant and stays admin-only. Tokens are
 // stored server-side keyed by the caller's SF user id; the SPA never sees a

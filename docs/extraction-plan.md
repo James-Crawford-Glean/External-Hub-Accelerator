@@ -20,7 +20,7 @@ Internal review first, then publication together.
 | Aurora | Stays. Aurora Serverless v2 + Data API is the primary store; DynamoDB for identity, keys, caches, run logs. |
 | Partner sandbox | Deferred. `live/partners` and `modules/partner-sandbox` are not copied. The Indexing API client inside `apps/api/src/sandbox-access` is extracted into a standalone lib regardless. |
 | Fork vs copy | Clean copy. A GitHub fork carries all history (deleted partner data, screenshots, rotated secrets) and cannot change visibility independently of the private parent. The new repo receives the sanitized tree as its first commit. |
-| Visibility | Internal (private) first; publish after review with Alex. License to be chosen before publication (`apps/ps/LICENSE` is MIT, Glean Technologies Inc; the repo root has none). |
+| Visibility | Internal (private) first; publish after internal review. License to be chosen before publication (`apps/ps/LICENSE` is MIT, Glean Technologies Inc; the repo root has none). |
 | Wait for OAuth / email sync? | No. MCP OAuth is implemented and enabled in `js-dev`; the accelerator ships it as the default path. Email/calendar sync has no design yet; the accelerator ships the extension point and the paper marks it planned. |
 | Verification account | A new, empty member account in the AWS org (requested from the org admin; the requester's management-account role is billing-only). Until it exists, verification is static: `terraform validate`, Terragrunt input checks, unit tests, sanitization guard. |
 

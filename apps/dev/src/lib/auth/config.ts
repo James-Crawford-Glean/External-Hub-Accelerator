@@ -35,7 +35,7 @@ export function authConfig(): DevAuthConfig {
 }
 
 /** Auth is enforced once a Cognito pool is configured; otherwise docs browse open
- *  and the Sandbox falls back to a pasted psk_live_* key. Mirrors apps/ps AUTH_ENABLED. */
+ *  and the Sandbox falls back to a pasted psk_live_* key. */
 export function isAuthEnabled(): boolean {
   return cfg.authority.length > 0 && cfg.clientId.length > 0;
 }

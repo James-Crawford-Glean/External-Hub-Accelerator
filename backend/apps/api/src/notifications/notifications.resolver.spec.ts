@@ -16,9 +16,9 @@ describe('NotificationsResolver', () => {
       jest.fn(async () => [
         {
           id: 'ntf_1',
-          title: 'First partner mapped on 1 account',
-          body: 'WWT · no open pipeline',
-          href: '/accounts/acc_1',
+          title: 'Draft item awaiting review',
+          body: 'Northwind Traders · drafted by an assistant',
+          href: '/items/itm_1',
           created_at: '2026-10-09T00:00:00Z',
         },
       ]),
@@ -26,7 +26,7 @@ describe('NotificationsResolver', () => {
     const rows = await svc.notifications({}, null, identity);
     expect(query.mock.calls[0][0]).toContain('read_at IS NULL');
     expect(query.mock.calls[0][1]).toMatchObject({ email: 'matt@example.com' });
-    expect(rows[0]?.href).toBe('/accounts/acc_1');
+    expect(rows[0]?.href).toBe('/items/itm_1');
   });
 
   it('marks read only for the caller email', async () => {

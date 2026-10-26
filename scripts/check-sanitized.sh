@@ -44,7 +44,7 @@ check "email address" '(?i)\b[a-z0-9._%+-]+@(?!(?:[a-z0-9-]+\.)*example\.(?:com|
 check "source-project hostname" '\b[a-z0-9.-]*(partnersync\.io|gleandemo\.com)\b'
 check "glean tenant hostname" '\b[a-z0-9-]+-be\.glean\.com\b'
 # README.md may name the source project once, for provenance.
-check "source-project name" '(?i)partnersync|askscio' --pcre2 --glob '!README.md'
+check "source-project name" '(?i)partnersync|askscio|\bscio\b' --pcre2 --glob '!README.md'
 
 if [[ $fail -ne 0 ]]; then
   echo

@@ -1,4 +1,4 @@
-// Mutation.recordLogin + Query.loginActivity — port of resolvers/login_events.py.
+// Mutation.recordLogin + Query.loginActivity.
 // recordLogin appends one interactive-login audit row for the caller (SPA
 // onSigninCallback, once per completed Cognito sign-in — silent renews/reloads skip
 // it, so each row is one real re-auth); best-effort, caller-self, failures never

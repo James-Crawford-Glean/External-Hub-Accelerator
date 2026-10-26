@@ -1,8 +1,8 @@
 // URL / host normalization — the single source for turning any dirty URL-ish value
 // (`https://www.x.com/`, the colon-less `https//www.x.com`, protocol-relative `//x.com`,
-// or a bare `x.com`) into a clean host. Used by the matcher, logo fetch, the V1 backfill,
-// and partner writes so a scheme is never doubled and the logo/match key is never garbage.
-// Pure — no dependencies, safe to import from any layer. Port of lib/urls.py.
+// or a bare `x.com`) into a clean host. Used by the logo fetch and by record writes so a
+// scheme is never doubled and the logo/match key is never garbage.
+// Pure — no dependencies, safe to import from any layer.
 
 // Leading scheme in any form: 'https://', the malformed colon-less 'https//', or a
 // bare protocol-relative '//'. Requires the '//' (or ':') so a bare 'www.x.com' — where

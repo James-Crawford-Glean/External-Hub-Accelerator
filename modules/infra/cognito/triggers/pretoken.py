@@ -1,7 +1,7 @@
 """Cognito pre-token-generation trigger (V2) — copy `email` onto the access token.
 
 Cognito access tokens carry `sub`, `client_id`, and `scope` but no email. The MCP
-resource server resolves roster roles and partner visibility by email, so the
+resource server resolves roster roles and row visibility by email, so the
 claim has to ride on the access token the MCP client presents. The ID token is
 left untouched.
 """
