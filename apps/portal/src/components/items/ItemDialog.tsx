@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Field } from '../ui/Field';
-import { ROLES, type Item, type ItemInput, type Role } from '../../data/types';
-import { createItem, updateItem } from '../../lib/api/items';
+import { ROLES, type Role } from '../../data/types';
+import { createItem, updateItem, type Item, type ItemInput } from '../../lib/api/items';
 import { useSaveAction } from '../../lib/saveAction';
 import { roleLabel } from '../../lib/labels';
 

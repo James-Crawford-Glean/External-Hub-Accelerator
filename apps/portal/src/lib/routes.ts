@@ -3,6 +3,7 @@
 // reports as /items/:id and the entity travels as metadata instead. Same normalization
 // feeds route_transition so route timings and page rollups count the same populations.
 import { matchRoutes } from 'react-router-dom';
+import { DOMAIN } from '../domain';
 
 /** Deploy base the router is mounted under ('/<app>' live, '/' in dev and tests). */
 export const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
@@ -13,11 +14,11 @@ interface RouteSpec {
   entity?: string;
 }
 
-// Mirrors App.tsx. A route missing here still reports (raw path), it just doesn't collapse.
+// Mirrors App.tsx: the platform routes plus the domain's. A route missing here
+// still reports (raw path), it just doesn't collapse.
 const ROUTES: RouteSpec[] = [
   { path: '/' },
-  { path: '/items' },
-  { path: '/items/:id', entity: 'item' },
+  ...DOMAIN.routes.map(({ path, entity }) => ({ path, entity })),
   { path: '/users' },
   { path: '/admin' },
   { path: '/admin/roles' },

@@ -18,8 +18,9 @@ user noticing a wrong number.
 This page is the authoring guide for those surfaces. The rules come from the
 source project this accelerator was extracted from, where every failure mode
 below was seen in production chat and fixed by changing what Glean reads
-(descriptions, schemas, annotations, the skill) rather than the handlers.
-The shipped example skill, written to these rules for the five tools in
+(descriptions, schemas, annotations, the skill) rather than the handlers. The
+examples are retold against the example domain, `items`, so they read the way
+they would in your portal. The shipped example skill, written to these rules for the five tools in
 [Tools](tools.md), is at `docs/mcp/skills/example/SKILL.md` in the repository,
 with an Agent Builder companion at `docs/mcp/skills/example/agent-instructions.md`.
 
@@ -77,9 +78,9 @@ the rule is what to carry into your own descriptions and skill.
 ### Reads gated like writes, then never called
 
 **Symptom.** Every read tool opened a write-confirmation panel. A question over a
-17-partner list produced 17 approval prompts. The planner then learned to
-answer the same questions from indexed spreadsheet exports of the portal's own
-data: zero `tools/call` for a prompt the server owned.
+pasted list of 17 item names produced 17 approval prompts. The planner then
+learned to answer the same questions from indexed spreadsheet exports of the
+portal's own data: zero `tools/call` for a prompt the server owned.
 
 **Cause.** `tools/list` carried no MCP `annotations`, so the host could not tell
 reads from writes and treated every tool as a write.
@@ -92,14 +93,14 @@ description asserting that live records supersede indexed copies
 heading without replacing a tool figure.
 
 **Rule.** Annotations are routing metadata. A content tool that composes but
-does not persist (the source project's brief generator) is `READ_ONLY` too.
+does not persist (a summary or brief generator) is `READ_ONLY` too.
 Keep the provenance suffix on the server side so no tool can drop it;
 `routing.spec.ts` pins it.
 
 ### Trigger keyed on the product name
 
-**Symptom.** "Use `<product>` MCP to show which accounts Contoso has mapped"
-made Chat claim the action was not connected. The same question asked plainly,
+**Symptom.** "Use `<product>` MCP to show which items Contoso owns" made Chat
+claim the action was not connected. The same question asked plainly,
 without naming the product, got a correct live answer. The action was enabled
 the whole time.
 
@@ -109,9 +110,9 @@ prioritise live tools. Naming the product in the trigger steered selection
 toward finding a server by that name instead of answering the question.
 
 **Fix.** Trigger on the subject matter: "Use this action for any question about
-partners, partner-account mappings, partner activity, or partner-involved
-pipeline, however the prompt is phrased and whether or not it names
-`<product>`." That wording is what the accelerator's `LIVE_DATA_NOTE` inherits.
+items, their categories, owners, or status, however the prompt is phrased and
+whether or not it names `<product>`." That shape is what the accelerator's
+`LIVE_DATA_NOTE` inherits.
 
 **Rule.** Describe the records and the questions people ask about them. Never
 make the product name, the server name, or the word "MCP" the trigger. Users
@@ -120,23 +121,22 @@ not be steered away from it.
 
 ### Sibling tools that share nouns
 
-**Symptom.** Three tools all mentioned partners and accounts. Chat picked by
-whichever name looked closest: a single-account tool called in a loop over a
-pasted list, a partner-to-accounts question answered with the
-account-to-partners tool, or a Salesforce search substituted for a
+**Symptom.** Two tools both mentioned items and owners: a single-item lookup
+and `searchItems`. Chat picked by whichever name looked closest: the single-item
+tool called in a loop over a pasted list, an owner-to-items question answered
+with the item-to-owner tool, or a document search substituted for a
 portal-owned fact.
 
 **Cause.** The descriptions said what each tool returned but not how it differed
 from its neighbours. Ambiguity in the catalog shows up as a wrong tool, not as
 an error.
 
-**Fix.** Each description states cardinality in capitals ("ONE Salesforce
-customer account", "MANY customer accounts or a pasted list"), names the sibling
-to use instead ("that is `getMappedPartnersForAccounts`"), and forbids the loop
-("Never call this in a loop over many accounts"). The skill adds a **direction
-check** paragraph under the router: record in hand and partners out is one
-tool; partner in hand and records out is another; a sheet to look up is a read;
-a sheet to record is a write.
+**Fix.** Each description states cardinality in capitals ("ONE item by id or
+name", "MANY items or a pasted list"), names the sibling to use instead ("that
+is `searchItems`"), and forbids the loop ("Never call this in a loop over many
+items"). The skill adds a **direction check** paragraph under the router: record
+in hand and owner out is one tool; owner in hand and records out is another; a
+sheet to look up is a read; a sheet to record is a write.
 
 **Rule.** When two tools could plausibly answer one prompt, both descriptions
 must name the other and say which prompt shapes belong to each. Cardinality
@@ -144,18 +144,18 @@ must name the other and say which prompt shapes belong to each. Cardinality
 
 ### The N+1 loop after a list
 
-**Symptom.** The 17 approvals above were one profile call per partner after a
-list call: the model fetched each partner's manager separately, when the list
-tool had already returned it.
+**Symptom.** The 17 approvals above were one detail call per item after a list
+call: the model fetched each item's owner separately, when the list tool had
+already returned it.
 
 **Cause.** The list tool's description did not say that each row already carried
-the manager, mapped-account count, and pipeline figures, so the model assumed it
-had to fetch them.
+the owner, category, status, and website, so the model assumed it had to fetch
+them.
 
-**Fix.** The description now says "Each result already carries team, status,
-region, partner manager, mapped-account count, open pipeline, and
-sourced/influenced opportunity counts, so one call answers a list question. Do
-NOT follow up with `getPartner` per result."
+**Fix.** The description now says what `searchItems` says today: "Returns id,
+name, category, status, owner, website, and a link into the portal", so one call
+answers a list question, and it names the follow-up not to make ("Do NOT call
+a per-item lookup for each result").
 
 **Rule.** Say what comes back, field by field, when a follow-up call is the
 likely mistake. A list tool's text output should include the columns a user
@@ -163,10 +163,10 @@ will ask about next.
 
 ### A value the description forgot
 
-**Symptom.** Users asking about one particular partner team were rarely answered
-with the `team` filter, even though the server accepted it.
+**Symptom.** Users asking for archived items were rarely answered with the
+`status` filter, even though the server accepted it.
 
-**Cause.** The `team` field's description listed five of the six team values.
+**Cause.** The `status` field's description named `ACTIVE` and not `ARCHIVED`.
 The model treated the list as exhaustive.
 
 **Fix.** Description-only change adding the missing value, later hardened by
@@ -174,9 +174,9 @@ putting the full list in a JSON Schema `enum` so a paraphrased value cannot
 silently match nothing.
 
 **Rule.** Every bounded value is an `enum` in the schema and is listed in the
-field description. Generate the description from the same constant the handler
-validates against, as `createActivity` in the source project does with
-`TYPES.join(', ')`.
+field description. Generate both from the same constant the handler validates
+against (`searchItems` filters on `LIVE_STATUSES`; its `status` enum should be
+built from it, not retyped).
 
 ### A description too long to hydrate
 
@@ -197,7 +197,7 @@ presentation, edge cases) lives in the skill section for that tool.
 ### A skill with instructions and nothing to call
 
 **Symptom.** After Glean Chat moved to skill-based tool access, a plain question
-("who is the partner manager for Northwind?") matched the hand-authored skill, which
+("who owns Northwind?") matched the hand-authored skill, which
 then reported the tools as unavailable.
 
 **Cause.** The hand-authored skill had no tools attached. The auto-generated
@@ -244,7 +244,7 @@ schema and the skill were forcing a question with no answer.
 **Fix.** Drop the field from `required`; give every occurrence one shared
 description that says it is optional, ignored on a signed-in connection, and
 not to be asked for unless a tool error says it is missing (`CURRENT_USER_EMAIL`
-in `apps/mcp/src/tools/updateItem.ts`). The skill's **Acting user** section
+in `apps/mcp/src/tools/items/updateItem.ts`). The skill's **Acting user** section
 says the same thing in the same words. The error path for key connections is
 unchanged and still prompts once.
 
@@ -293,9 +293,9 @@ or schema (see [After any change](#after-any-change-re-sync-the-catalog)).
 
 ### Body wording steers too
 
-**Symptom.** A working multi-step flow (list a partner's accounts, join a
-Salesforce field, render a sheet) stopped reaching the tool after the skill's
-output instructions were tightened to "CSV only".
+**Symptom.** A working multi-step flow (list an owner's items, add a column
+from the upstream record, render a sheet) stopped reaching the tool after the
+skill's output instructions were tightened to "CSV only".
 
 **Cause.** The new wording was added after the flow already worked, and it moved
 routing off the path that worked. The source project reverted to the wording
@@ -391,9 +391,10 @@ the first reader so the second one rarely fires.
    The argument gate drops the known names (`HOST_INJECTED_ARGUMENTS`,
    currently `_user_goal` from Glean write actions) centrally; add a new one
    there, not to each tool.
-9. **Distinguish look-alike fields.** When two fields are both "status", say
-   which: "the account badge, not the opportunity stage; use `stages` for
-   that." The model picks the first field whose name matches the prompt.
+9. **Distinguish look-alike fields.** When two fields could both be "status",
+   say which: "the item's lifecycle (`ACTIVE`, `ARCHIVED`), not whether it has
+   been indexed; use `indexedAt` for that." The model picks the first field
+   whose name matches the prompt.
 
 ## Rules for the skill
 

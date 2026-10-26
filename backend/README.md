@@ -36,8 +36,10 @@ node apps/workers/migrate/gen-migrations.mjs   # after adding a migration
 
 1. Declare it in `schema.graphql` under `Query` or `Mutation`.
 2. Write the method on a resolver class under `apps/api/src/<area>/`.
-3. Construct the resolver in `apps/api/src/container.ts` and bind the field in
-   `apps/api/src/registry.ts`.
+3. Platform field: construct the resolver in `apps/api/src/container.ts` and
+   bind the field in `apps/api/src/registry.ts`. Domain field: add the resolver
+   factory and its field list to `apps/api/src/domain.ts`; the container and
+   registry pick them up from there and never import domain files directly.
 
 `apps/api/src/schema-registry.spec.ts` fails if the schema and the registry
 disagree, and the appsync Terraform module creates the AppSync resolver from the
@@ -45,10 +47,12 @@ schema on the next plan.
 
 ## Adding an MCP tool
 
-Write `apps/mcp/src/tools/<name>.ts` exporting a `ToolDefinition` (JSON Schema
-input, `READ_ONLY` or `CREATES_RECORDS` annotations, a handler that reuses the
-API's resolver classes through `apps/mcp/src/container.ts`), then list it in
-`apps/mcp/src/mcp/tools.ts`. Tools return `content` (text) plus
+Write `apps/mcp/src/tools/<domain>/<name>.ts` exporting a `ToolDefinition`
+(JSON Schema input, `READ_ONLY` or `CREATES_RECORDS` annotations, a handler
+that reuses the API's resolver classes, built from the services
+`apps/mcp/src/container.ts` exports), then list it in `apps/mcp/src/domain.ts`.
+`mcp/tools.ts` appends the domain's tools to the platform's (`whoAmI`,
+`listUsers`). Tools return `content` (text) plus
 `structuredContent`; the server attaches a provenance envelope under
 `_meta.portal` so a host can distinguish an empty result from a failure.
 

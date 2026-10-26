@@ -1,28 +1,25 @@
-// Home: a quick read on the example domain, the caller's Glean connection,
-// and an "Ask Glean" panel that streams a chat answer through the portal's
-// own streaming API using the caller's Glean token (Glean -> Hub).
+// Home: the domain's metrics and panel (from the registration in src/domain.tsx),
+// the caller's Glean connection, and an "Ask Glean" panel that streams a chat
+// answer through the portal's own streaming API using the caller's Glean token
+// (Glean -> Hub).
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Boxes, Plug, Send } from 'lucide-react';
+import { Plug, Send } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { GleanLogo } from '../components/ui/GleanLogo';
 import { MetricCard } from '../components/ui/MetricCard';
 import { useCurrentUser } from '../data/useCurrentUser';
-import type { Item } from '../data/types';
+import { DOMAIN } from '../domain';
 import { PORTAL_NAME } from '../lib/api/config';
 import { gleanBeginConnect, gleanConnection, gleanRedirectUri, rememberGleanReturn, streamGleanChat, type GleanConnection } from '../lib/api/glean';
 import { gleanReconnectCode, promptGleanReconnect } from '../lib/api/gleanReconnect';
-import { fetchItems } from '../lib/api/items';
 import { useAsyncData } from '../lib/api/useAsyncData';
-import { formatDate } from '../lib/labels';
 import { showToast } from '../state/toast';
 
 export function HomeView() {
   const me = useCurrentUser();
-  const items = useAsyncData(() => fetchItems({ status: ['ACTIVE'] }, 5), [], { items: [] as Item[], total: 0 });
-  const archived = useAsyncData(() => fetchItems({ status: ['ARCHIVED'] }, 1), [], { items: [] as Item[], total: 0 });
   const conn = useAsyncData(gleanConnection, [], null as GleanConnection | null);
+  const { HomeMetrics, HomePanel } = DOMAIN;
 
   return (
     <div>
@@ -36,9 +33,8 @@ export function HomeView() {
         </div>
       </header>
 
-      <div className="ps-grid ps-grid--cols-3" style={{ marginBottom: 20 }}>
-        <MetricCard label="Active items" value={items.data.total} loading={items.loading} />
-        <MetricCard label="Archived items" value={archived.data.total} loading={archived.loading} />
+      <div className={`ps-grid ${HomeMetrics ? 'ps-grid--cols-3' : 'ps-grid--cols-2'}`} style={{ marginBottom: 20 }}>
+        {HomeMetrics && <HomeMetrics />}
         <MetricCard
           label="Glean connection"
           value={conn.data?.connected ? 'Connected' : conn.data?.needsReconnect ? 'Reconnect' : 'Not connected'}
@@ -47,42 +43,8 @@ export function HomeView() {
         />
       </div>
 
-      <div className="ps-grid ps-grid--cols-2" style={{ alignItems: 'start' }}>
-        <Card>
-          <CardHeader
-            title="Recent items"
-            subtitle="The example domain."
-            action={
-              <Link to="/items" className="ps-row" style={{ gap: 6, fontSize: 13 }}>
-                <Boxes size={14} /> All items
-              </Link>
-            }
-          />
-          <CardBody flush>
-            {items.data.items.length === 0 ? (
-              <p className="ps-text-subtle" style={{ padding: 18, fontSize: 13 }}>
-                {items.loading ? 'Loading…' : 'No items yet. The item-sync worker fills this list from the upstream system.'}
-              </p>
-            ) : (
-              <table className="ps-table">
-                <tbody>
-                  {items.data.items.map((i) => (
-                    <tr key={i.id}>
-                      <td>
-                        <Link to={`/items/${i.id}`} style={{ fontWeight: 600, color: 'inherit' }}>
-                          {i.name}
-                        </Link>
-                      </td>
-                      <td className="ps-text-subtle">{i.category ?? '—'}</td>
-                      <td className="ps-text-subtle" style={{ textAlign: 'right' }}>{formatDate(i.updatedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </CardBody>
-        </Card>
-
+      <div className={`ps-grid ${HomePanel ? 'ps-grid--cols-2' : ''}`} style={{ alignItems: 'start' }}>
+        {HomePanel && <HomePanel />}
         <AskGlean conn={conn.data} />
       </div>
     </div>

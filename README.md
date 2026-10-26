@@ -36,9 +36,9 @@ environment variable.
 | AppSync GraphQL API, schema-driven resolvers, optional CSV exports (`modules/app/appsync`) | Extracted | Node-only. Domain workers replaced by a generic invoke hook. |
 | MCP server, OAuth 2.1 resource server + DCR default-on (`modules/app/mcp`) | Extracted | Own hostname; the unified authorizer is optional for API keys. |
 | Observability dashboards (`modules/infra/observability`) | Extracted | Function list and EMF namespace are inputs. |
-| Backend (`backend/`: API, authorizer, MCP, stream, four workers, 21 shared libs) | Extracted | Platform scope: users, roster, access requests, login audit, API keys, Glean OAuth + chat, logos, notifications, warmer. `tsc`, `eslint`, 40 jest suites (pglite integration) green; 8 bundles build. MCP `tools/call` arguments are validated against each tool's `inputSchema` before the handler runs. |
+| Backend (`backend/`: API, authorizer, MCP, stream, four workers, 20 shared libs) | Extracted | Platform scope: users, roster, access requests, login audit, API keys, Glean OAuth + chat, logos, notifications, warmer. `tsc`, `eslint`, 40 jest suites (pglite integration) green; 8 bundles build. MCP `tools/call` arguments are validated against each tool's `inputSchema` before the handler runs. |
 | SPA shell (`apps/portal/`) | Extracted | Vite + React, Cognito PKCE, capability-gated shell, example-domain views, admin screens, Glean connect + "Ask Glean" chat. `tsc`, `eslint`, 17 vitest cases (route-render suite), production build green. |
-| Example domain (`items`): schema, resolvers, sync worker, MCP tools, SPA views (`backend/libs/items`, `backend/apps/workers/item-sync`, `apps/portal/src/views/Item*`) | Extracted | Smallest domain exercising every path, including the MCP write guardrail: `createItem` lands as a `DRAFT` that a writer approves or rejects in the portal. Replace with yours. |
+| Example domain (`items`): schema, resolvers, sync worker, MCP tools, SPA views (`backend/libs/items`, `backend/apps/workers/item-sync`, `apps/portal/src/views/Item*`), registered through one `domain` file per app | Extracted | Smallest domain exercising every path, including the MCP write guardrail: `createItem` lands as a `DRAFT` that a writer approves or rejects in the portal. Replace with yours. |
 | Indexing API push of domain records (`backend/libs/glean-index`, `backend/apps/workers/glean-index`) | Extracted | Custom datasource, incremental on a schedule, full re-index from the admin screen; permissions derived from row visibility. Not yet run against a real tenant. |
 | Generic scheduled worker (`modules/data-pipeline/scheduled-worker`) | Extracted | Lambda + EventBridge + Aurora IAM + named secret reads + invoke-on-apply; used by both example workers. |
 | Developer portal (`apps/dev/`) | Extracted | Docusaurus at `/dev/` (in `spa_apps` and `spa_static_apps` for `example`, so deep links resolve at the edge); GraphQL reference generated from `backend/schema.graphql` (71 pages); Cognito-gated GraphiQL sandbox; MCP, Indexing, and auth docs. Builds clean. |
@@ -279,31 +279,52 @@ portal) and never touch AWS.
 
 ## Replacing the example domain
 
-The example domain is one entity, `items`, chosen to touch every path. To
-swap in yours:
+The example domain is one entity, `items`, chosen to touch every path. The
+platform reaches it through three registration files and nothing else:
+`backend/apps/api/src/domain.ts` (resolvers and the fields they serve),
+`backend/apps/mcp/src/domain.ts` (tools), and `apps/portal/src/domain.tsx`
+(routes, nav entry, breadcrumb labels, home panels). Everything the example
+owns lives under `backend/libs/items`, `backend/apps/api/src/items`,
+`backend/apps/workers/{item-sync,glean-index}`, `backend/apps/mcp/src/tools/items`,
+`backend/migrations/100_example_items.sql`, `apps/portal/src/views/Item*`,
+`apps/portal/src/views/ItemsHome.tsx`, `apps/portal/src/components/items`,
+`apps/portal/src/lib/api/items.ts`, the `# example domain` blocks in
+`backend/schema.graphql`, and `live/example/data-pipeline/{item-sync,glean-index}`.
+
+To swap in yours:
 
 1. **Schema**: add a migration under `backend/migrations/` (keep the opaque
    id, `external_id` satellite, `owner_user_id`, and `visibility_role`
    columns; they are what the platform's authz, sync, and indexing expect).
 2. **Backend**: a service like `backend/libs/items`, a resolver like
-   `backend/apps/api/src/items`, fields in `schema.graphql`, bindings in
-   `registry.ts`. `schema-registry.spec.ts` fails until they agree.
+   `backend/apps/api/src/items`, fields in `schema.graphql`, then register the
+   resolver and its field list in `backend/apps/api/src/domain.ts`.
+   `schema-registry.spec.ts` fails until schema and registration agree.
 3. **Sync**: copy `backend/apps/workers/item-sync` and replace `upstream.ts`
    with your system's client. Keep `externalId` stable.
 4. **Index**: copy `backend/apps/workers/glean-index`; `toDocument` is the
-   only function that knows your fields.
+   only function that knows your fields. The admin surface (`gleanIndexRuns`,
+   `triggerGleanIndex`, the Glean screen's run list) is platform code and
+   finds your worker through `GLEAN_INDEX_FUNCTION`.
 5. **MCP**: a read tool, an in-place write tool, and a create tool under
-   `backend/apps/mcp/src/tools`, listed in `tools.ts`. Reuse the resolver
-   classes so the MCP and GraphQL surfaces cannot disagree. Keep the create
-   tool's `DRAFT` landing and the approve / reject mutations if assistant
-   writes should stay reviewable; `items-review.integration.spec.ts` is the
-   state-machine spec to copy.
-6. **SPA**: views like `apps/portal/src/views/Item*`, routes in `App.tsx`,
-   a nav entry in `Sidebar.tsx`, the route in `lib/routes.ts`.
+   `backend/apps/mcp/src/tools/<yours>/`, listed in
+   `backend/apps/mcp/src/domain.ts`. Reuse the resolver classes so the MCP and
+   GraphQL surfaces cannot disagree. Keep the create tool's `DRAFT` landing
+   and the approve / reject mutations if assistant writes should stay
+   reviewable; `items-review.integration.spec.ts` is the state-machine spec to
+   copy.
+6. **SPA**: views like `apps/portal/src/views/Item*`, an API module like
+   `lib/api/items.ts`, then register routes, the nav entry, breadcrumb labels,
+   and home panels in `apps/portal/src/domain.tsx`.
 7. **Infra**: one `scheduled-worker` stack per worker under
-   `live/<env>/data-pipeline/`, the worker names in `infra/observability`.
+   `live/<env>/data-pipeline/`, the worker names in `infra/observability`, and
+   the indexer stack as the `glean_index` dependency of `app/appsync`.
 
-Then delete the `items` files. Nothing else references them.
+Then delete the `items` files listed above and remove the `# example domain`
+blocks from `schema.graphql`. The three `domain` files are the only platform
+files that change; with an empty registration in each (`domainResolvers = () =>
+({})` and `domainFields = {}`, `DOMAIN_TOOLS = []`, `DOMAIN = EMPTY_DOMAIN`),
+the platform compiles and its tests pass with no domain at all.
 
 ## Adding an environment
 

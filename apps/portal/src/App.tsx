@@ -1,10 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { useCurrentUser } from './data/useCurrentUser';
+import { DOMAIN } from './domain';
 import { canAdmin } from './lib/capabilities';
 import { HomeView } from './views/HomeView';
-import { ItemsView } from './views/ItemsView';
-import { ItemDetailView } from './views/ItemDetailView';
 import { UsersView } from './views/UsersView';
 import { RolesView } from './views/RolesView';
 import { ApiKeysView } from './views/ApiKeysView';
@@ -13,8 +12,9 @@ import { GleanCallbackView } from './views/GleanCallbackView';
 import { LoginActivityView } from './views/LoginActivityView';
 import { AwsView } from './views/AwsView';
 
-// Routes. The admin section is gated client-side on `me.isAdmin` for navigation;
-// every resolver behind it enforces requireAdmin on the server.
+// Routes: the platform's plus the domain's (src/domain.tsx). The admin section
+// is gated client-side on `me.isAdmin` for navigation; every resolver behind
+// it enforces requireAdmin on the server.
 export function App() {
   const me = useCurrentUser();
   const admin = canAdmin(me);
@@ -23,8 +23,9 @@ export function App() {
     <AppShell>
       <Routes>
         <Route path="/" element={<HomeView />} />
-        <Route path="/items" element={<ItemsView />} />
-        <Route path="/items/:id" element={<ItemDetailView />} />
+        {DOMAIN.routes.map((r) => (
+          <Route key={r.path} path={r.path} element={r.element} />
+        ))}
         <Route path="/users" element={<UsersView />} />
         <Route path="/admin" element={<Navigate to="/admin/roles" replace />} />
         <Route path="/admin/roles" element={gate(<RolesView />)} />

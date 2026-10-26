@@ -37,24 +37,30 @@ rest of the list under *Mock and example data*.
   `spa-deploy.yml` on manual dispatch.
 
 The example domain is one entity, `items` (`backend/libs/items`,
-`backend/apps/api/src/items`, `backend/apps/workers/item-sync`, the three MCP
-tools, `apps/portal/src/views/Item*`). Everything else is platform. An adopter
-replaces `items`; the README section *Replacing the example domain* is the
-checklist.
+`backend/apps/api/src/items`, `backend/apps/workers/item-sync`,
+`backend/apps/mcp/src/tools/items`, `apps/portal/src/views/Item*`). Everything
+else is platform, and platform code reaches the domain only through one
+registration file per app: `backend/apps/api/src/domain.ts`,
+`backend/apps/mcp/src/domain.ts`, `apps/portal/src/domain.tsx`. Never import a
+domain file from anywhere else; with empty registrations the platform compiles
+and its tests pass. An adopter replaces `items`; the README section *Replacing
+the example domain* is the checklist.
 
 ## Adding things: convention, not registration
 
 **GraphQL field.** Declare it in `backend/schema.graphql`, write the method on
-a resolver class under `backend/apps/api/src/<area>/`, construct the resolver in
-`apps/api/src/container.ts`, bind the field in `apps/api/src/registry.ts`.
-`schema-registry.spec.ts` fails until schema and registry agree; the `appsync`
-module creates the AppSync resolver from the schema on the next apply.
+a resolver class under `backend/apps/api/src/<area>/`. Platform field:
+construct the resolver in `apps/api/src/container.ts` and bind the field in
+`apps/api/src/registry.ts`. Domain field: add the factory and the field list to
+`apps/api/src/domain.ts`. `schema-registry.spec.ts` fails until schema and
+registry agree; the `appsync` module creates the AppSync resolver from the
+schema on the next apply.
 
-**MCP tool.** Write `backend/apps/mcp/src/tools/<name>.ts` exporting a
+**MCP tool.** Write `backend/apps/mcp/src/tools/<domain>/<name>.ts` exporting a
 `ToolDefinition` (JSON Schema input with `additionalProperties: false`,
 `READ_ONLY` / `CREATES_RECORDS` / `UPDATES_IN_PLACE` annotations, a handler that
-calls a resolver class through `apps/mcp/src/container.ts`), then list it in
-`apps/mcp/src/mcp/tools.ts`. Return `content` text that carries the rows a
+calls a resolver class built from the services `apps/mcp/src/container.ts`
+exports), then list it in `apps/mcp/src/domain.ts`. Return `content` text that carries the rows a
 follow-up needs plus `structuredContent`. The server adds the argument gate,
 the provenance envelope, and the catalog filter; do not re-implement them in a
 tool. A tool change is not done until the skill matches it (see *MCP changes*).
@@ -63,8 +69,10 @@ tool. A tool change is not done until the skill matches it (see *MCP changes*).
 stable, add one `scheduled-worker` stack under `live/<env>/data-pipeline/`, and
 add the function name to `infra/observability`.
 
-**Portal view.** A view under `apps/portal/src/views/`, a route in `App.tsx` and
-`lib/routes.ts`, a nav entry in `components/layout`.
+**Portal view.** A view under `apps/portal/src/views/`. Platform view: a route
+in `App.tsx` and `lib/routes.ts`, a nav entry in `components/layout`. Domain
+view: a route, nav entry, breadcrumb label, and optional home panel in
+`apps/portal/src/domain.tsx`.
 
 **Migration.** A new file under `backend/migrations/`, every statement
 `IF NOT EXISTS` / `ON CONFLICT`, then

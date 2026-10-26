@@ -1,6 +1,7 @@
 // Admin surface for the Hub -> Glean push: recent runs and an on-demand full
-// re-index (which also registers the datasource). The worker is invoked
-// asynchronously; GLEAN_INDEX_FUNCTION names it (set by the appsync stack).
+// re-index (which also registers the datasource). Platform code: it knows the
+// indexing worker only by its run-log entity and by GLEAN_INDEX_FUNCTION (set
+// by the appsync stack); unset, the trigger reports false and nothing runs.
 import { AuroraService } from '@libs/aurora';
 import { AuthzService, type Identity } from '@libs/authz';
 import { WorkerService } from '@libs/worker';

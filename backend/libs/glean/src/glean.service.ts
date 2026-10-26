@@ -65,9 +65,21 @@ function photoHost(url: string): string {
   }
 }
 
-/** Glean-served image URLs need the user token; Slack/Google CDNs do not. */
-function isGleanHostedPhotoUrl(url: string, base: string): boolean {
-  return url.startsWith(base) || url.includes('.glean.com/');
+/**
+ * Glean-served image URLs need the user token; Slack/Google CDNs do not. Glean
+ * serves photos from the tenant backend host and from sibling hosts under the
+ * same parent domain (`<tenant>-be.glean.com` -> `*.glean.com`), so the parent
+ * is derived from GLEAN_BASE_URL rather than hard-coded. A base host with no
+ * parent beyond the public suffix matches itself only, so the token is never
+ * sent to an arbitrary host.
+ */
+export function isGleanHostedPhotoUrl(url: string, base: string): boolean {
+  const host = photoHost(url);
+  const baseHost = photoHost(base);
+  if (!host || !baseHost) return false;
+  if (host === baseHost) return true;
+  const parent = baseHost.slice(baseHost.indexOf('.') + 1);
+  return parent.includes('.') && (host === parent || host.endsWith(`.${parent}`));
 }
 
 export interface GleanConnection {

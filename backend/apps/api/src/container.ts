@@ -3,8 +3,8 @@
 // built), singleton across warm invokes, order-independent. Wiring is plain
 // constructor calls, so a missing or mis-typed dependency is a compile error.
 //
-// To add a domain: construct its resolvers here, bind their fields in
-// registry.ts, and declare the fields in schema.graphql.
+// Platform resolvers are built here. The domain's come from domain.ts, which
+// receives the shared services and is the only file that names domain code.
 import { once } from '@libs/di';
 import { RDSDataClient } from '@aws-sdk/client-rds-data';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
@@ -19,7 +19,6 @@ import { LogoService } from '@libs/logo';
 import { AvatarService } from '@libs/avatar';
 import { WorkerService } from '@libs/worker';
 import { ApiKeyService, ApiKeyStore } from '@libs/credentials';
-import { ItemsService } from '@libs/items';
 
 import { UsersResolver } from './users/users.resolver';
 import { RosterResolver } from './roster/roster.resolver';
@@ -27,11 +26,11 @@ import { AccessRequestsResolver } from './access-requests/access-requests.resolv
 import { LoginEventsResolver } from './login-events/login-events.resolver';
 import { ApiKeysResolver } from './api-keys/api-keys.resolver';
 import { GleanResolver } from './glean/glean.resolver';
+import { IndexingResolver } from './glean/indexing.resolver';
 import { WarmerResolver } from './warmer/warmer.resolver';
 import { LogosResolver } from './logos/logos.resolver';
 import { NotificationsResolver } from './notifications/notifications.resolver';
-import { ItemsResolver } from './items/items.resolver';
-import { IndexingResolver } from './items/indexing.resolver';
+import { domainResolvers } from './domain';
 
 // Reads the HMAC pepper from Secrets Manager at runtime (never at import or apply).
 function apiKeyPepper(): () => Promise<string> {
@@ -57,22 +56,25 @@ export const glean = once(() => new GleanService(aurora()));
 export const avatar = once(() => new AvatarService(aurora(), glean()));
 export const authz = once(() => new AuthzService(roster()));
 export const apiKeys = once(() => new ApiKeyService(new ApiKeyStore(), apiKeyPepper()));
-export const items = once(() => new ItemsService(aurora()));
 
-// --- resolvers (keyed by class name; the registry indexes this map) ---
-export const resolvers = {
+/** The shared services a domain's resolvers are built from. */
+export const services = { aurora, worker, logo, roster, identity, accessRequests, loginEvents, glean, avatar, authz, apiKeys } as const;
+export type Services = typeof services;
+
+const platformResolvers = {
   UsersResolver: once(() => new UsersResolver(aurora(), authz(), identity(), roster(), accessRequests(), avatar())),
   RosterResolver: once(() => new RosterResolver(authz(), roster(), accessRequests())),
   AccessRequestsResolver: once(() => new AccessRequestsResolver(accessRequests(), authz())),
   LoginEventsResolver: once(() => new LoginEventsResolver(aurora(), loginEvents(), authz(), identity())),
   ApiKeysResolver: once(() => new ApiKeysResolver(apiKeys(), authz())),
   GleanResolver: once(() => new GleanResolver(glean(), worker(), authz())),
+  IndexingResolver: once(() => new IndexingResolver(aurora(), worker(), authz())),
   WarmerResolver: once(() => new WarmerResolver(aurora(), authz())),
   LogosResolver: once(() => new LogosResolver(logo(), authz())),
   NotificationsResolver: once(() => new NotificationsResolver(aurora(), identity())),
-  // Example domain. Replace with yours.
-  ItemsResolver: once(() => new ItemsResolver(items(), authz(), identity(), aurora())),
-  IndexingResolver: once(() => new IndexingResolver(aurora(), worker(), authz())),
 } as const;
+
+// --- resolvers (keyed by class name; the registry indexes this map) ---
+export const resolvers = { ...platformResolvers, ...domainResolvers(services) } as const;
 
 export type ResolverKey = keyof typeof resolvers;

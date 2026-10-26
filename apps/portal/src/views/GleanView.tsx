@@ -20,10 +20,11 @@ import {
   gleanRedirectUri,
   gleanSetEndpoint,
   rememberGleanReturn,
+  fetchGleanIndexRuns,
+  triggerGleanIndex,
   type GleanConnection,
+  type IndexRun,
 } from '../lib/api/glean';
-import { fetchGleanIndexRuns, triggerGleanIndex } from '../lib/api/items';
-import type { IndexRun } from '../data/types';
 
 export function GleanView() {
   const [conn, setConn] = useState<GleanConnection | null | undefined>(undefined);

@@ -1,7 +1,8 @@
 // Composition root for the MCP Lambda. Mirrors the subset of apps/api's
-// container the tools need, reusing the same resolver classes and libs so
-// query logic (and its fixes) lives in one place: no SQL in the MCP handler.
-// once()-memoized: lazy and singleton across warm invokes.
+// container the platform tools need, reusing the same resolver classes and
+// libs so query logic (and its fixes) lives in one place: no SQL in the MCP
+// handler. once()-memoized: lazy and singleton across warm invokes. Domain
+// tools build their own resolvers from the exported services (see domain.ts).
 import { once } from '@libs/di';
 import { RDSDataClient } from '@aws-sdk/client-rds-data';
 import { AuroraService, auroraConfigFromEnv } from '@libs/aurora';
@@ -13,9 +14,7 @@ import { AuthzService } from '@libs/authz';
 import { IdentityService } from '@libs/identity';
 import { AccessRequestsService } from '@libs/access-requests';
 import { CognitoAccessTokenVerifier, CognitoJwtVerifier, CredentialService } from '@libs/credentials';
-import { ItemsService } from '@libs/items';
 import { UsersResolver } from '../../api/src/users/users.resolver';
-import { ItemsResolver } from '../../api/src/items/items.resolver';
 import { oauthConfigFromEnv } from './auth/config';
 import { CognitoUserPoolClients } from './auth/cognito-clients';
 
@@ -27,7 +26,7 @@ export function setAuroraForLocal(a: AuroraService): void {
   auroraOverride = a;
 }
 
-const aurora = once(() => auroraOverride ?? new AuroraService(new RDSDataClient({}), auroraConfigFromEnv()));
+export const aurora = once(() => auroraOverride ?? new AuroraService(new RDSDataClient({}), auroraConfigFromEnv()));
 const glean = once(() => new GleanService(aurora()));
 const avatar = once(() => new AvatarService(aurora(), glean()));
 const accessRequests = once(() => new AccessRequestsService(aurora()));
@@ -38,7 +37,6 @@ export const identityService = once(() => new IdentityService(aurora()));
 
 export const resolvers = {
   users: once(() => new UsersResolver(aurora(), authz(), identityService(), roster(), accessRequests(), avatar())),
-  items: once(() => new ItemsResolver(new ItemsService(aurora()), authz(), identityService(), aurora())),
 } as const;
 
 // OAuth resource-server config (RFC 9728 / 7591). Null only when OAUTH_PUBLIC_URL

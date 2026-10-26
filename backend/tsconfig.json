@@ -29,9 +29,6 @@
       "@libs/avatar": [
         "libs/avatar/src"
       ],
-      "@libs/cache": [
-        "libs/cache/src"
-      ],
       "@libs/credentials": [
         "libs/credentials/src"
       ],

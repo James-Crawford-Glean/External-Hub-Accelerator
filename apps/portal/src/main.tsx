@@ -10,7 +10,6 @@ import { EmptyState } from './components/ui/EmptyState';
 import './styles/global.css';
 import './styles/components.css';
 import './styles/layout.css';
-import './styles/views.css';
 
 // Start RUM as early as possible so page load and web vitals are captured.
 // No-op unless an app monitor is configured.

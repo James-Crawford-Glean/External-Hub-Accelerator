@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
-// Renders every route with the API layer mocked. Proves the shell and views
-// compose against the platform schema without a browser or a backend.
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+// Renders the shell and every platform route with the API layer mocked and an
+// empty domain registration. Proves the shell composes against the platform
+// schema alone, which is what an adopter starts from after deleting the
+// example domain. The example's own routes are covered in items.dom.test.tsx.
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { CurrentUserContext } from '../data/useCurrentUser';
-import type { Item, User } from '../data/types';
+import type { User } from '../data/types';
 
 const me: User = {
   id: 'usr_00000000000001',
@@ -19,50 +21,8 @@ const me: User = {
   initials: 'AA',
   avatarUrl: null,
 };
-const item: Item = {
-  id: 'itm_00000000000001',
-  externalId: 'EX-1001',
-  name: 'Northwind Traders',
-  category: 'Distributor',
-  status: 'ACTIVE',
-  description: 'Regional distributor.',
-  website: 'northwind.example',
-  owner: { id: 'usr_2', email: 'owner.one@example.com', name: 'Owner One' },
-  visibilityRole: null,
-  source: 'sync',
-  syncedAt: '2026-10-16T01:00:00Z',
-  indexedAt: '2026-10-16T01:05:00Z',
-  reviewedAt: null,
-  reviewedBy: null,
-  createdAt: '2026-10-01T00:00:00Z',
-  updatedAt: '2026-10-16T01:00:00Z',
-};
-const draft: Item = {
-  ...item,
-  id: 'itm_00000000000002',
-  externalId: null,
-  name: 'Contoso Logistics',
-  status: 'DRAFT',
-  source: 'mcp',
-  syncedAt: null,
-  indexedAt: null,
-};
-const itemsById: Record<string, Item> = { [item.id]: item, [draft.id]: draft };
-const approveItem = vi.fn(async (id: string) => ({ ...itemsById[id]!, status: 'ACTIVE' as const, reviewedAt: '2026-10-16T03:00:00Z', reviewedBy: me.email }));
-const rejectItem = vi.fn(async (id: string) => ({ ...itemsById[id]!, status: 'REJECTED' as const, reviewedAt: '2026-10-16T03:00:00Z', reviewedBy: me.email }));
 
-vi.mock('../lib/api/items', () => ({
-  fetchItems: async (filter: { draftsOnly?: boolean }) => (filter.draftsOnly ? { items: [draft], total: 1 } : { items: [item], total: 1 }),
-  fetchItem: async (id: string) => itemsById[id] ?? null,
-  fetchItemCategories: async () => ['Distributor'],
-  createItem: async () => item,
-  updateItem: async () => item,
-  archiveItem: async () => item,
-  approveItem: (id: string) => approveItem(id),
-  rejectItem: (id: string) => rejectItem(id),
-  fetchGleanIndexRuns: async () => [{ id: 'run_1', type: 'full', status: 'success', startedAt: '2026-10-16T01:00:00Z', completedAt: '2026-10-16T01:05:00Z', processed: 3 }],
-  triggerGleanIndex: async () => true,
-}));
+vi.mock('../domain', async () => ({ DOMAIN: (await import('../lib/domain')).EMPTY_DOMAIN }));
 vi.mock('../lib/api/identity', () => ({
   fetchMe: async () => me,
   recordLogin: async () => undefined,
@@ -84,6 +44,8 @@ vi.mock('../lib/api/apiKeys', () => ({
 vi.mock('../lib/api/glean', async (orig) => ({
   ...(await orig<typeof import('../lib/api/glean')>()),
   gleanConnection: async () => ({ configured: true, baseUrl: 'https://tenant-be.example.net', connected: true, needsReconnect: false, email: 'ada@example.com', scopes: ['chat'], expiresAt: null }),
+  fetchGleanIndexRuns: async () => [{ id: 'run_1', type: 'full', status: 'success', startedAt: '2026-10-16T01:00:00Z', completedAt: '2026-10-16T01:05:00Z', processed: 3 }],
+  triggerGleanIndex: async () => true,
 }));
 vi.mock('../lib/api/loginActivity', () => ({
   fetchLoginActivity: async () => ({ items: [{ id: '1', email: 'ada@example.com', userAgent: 'Mozilla/5.0 (Macintosh) Chrome/130 Safari/537.36', createdAt: '2026-10-16T02:00:00Z' }], total: 1 }),
@@ -93,65 +55,33 @@ vi.mock('../lib/api/logos', () => ({ fetchLogos: async () => new Map() }));
 vi.mock('../lib/auth/userManager', () => ({ logout: async () => undefined, getIdToken: async () => 't', login: async () => undefined }));
 vi.mock('../lib/telemetry', () => ({ recordPage: () => undefined, recordRouteTransition: () => undefined, setTelemetryUser: () => undefined, initTelemetry: () => undefined, recordEvent: () => undefined }));
 
-const renderAt = (path: string) =>
+const renderAt = (path: string, user: User = me) =>
   render(
-    <CurrentUserContext.Provider value={me}>
+    <CurrentUserContext.Provider value={user}>
       <MemoryRouter initialEntries={[path]}>
         <App />
       </MemoryRouter>
     </CurrentUserContext.Provider>,
   );
 
-describe('portal routes', () => {
-  it('home shows the welcome, metrics, recent items and Ask Glean', async () => {
+describe('portal shell with an empty domain', () => {
+  it('home shows the welcome, the Glean connection and Ask Glean', async () => {
     renderAt('/');
     expect(screen.getByRole('heading', { name: /Welcome, Ada/ })).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Northwind Traders' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Connected')).toBeTruthy());
     expect(screen.getByLabelText('Question for Glean')).toBeTruthy();
   });
 
-  it('items list renders rows and the create button for a writer', async () => {
-    renderAt('/items');
-    await waitFor(() => expect(screen.getByText('Northwind Traders')).toBeTruthy());
-    expect(screen.getByRole('button', { name: /New item/ })).toBeTruthy();
+  it('the workspace nav has Home and People only', () => {
+    renderAt('/');
+    expect(screen.getByRole('link', { name: /Home/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /People/ })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Items/ })).toBeNull();
   });
 
-  it('item detail shows the record facts', async () => {
-    renderAt('/items/itm_00000000000001');
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Northwind Traders' })).toBeTruthy());
-    expect(screen.getByText('EX-1001')).toBeTruthy();
-    expect(screen.getByText('Everyone')).toBeTruthy();
-    expect(screen.queryByText(/Awaiting review/)).toBeNull();
-  });
-
-  it('a writer can open the review queue from the status filter', async () => {
-    renderAt('/items');
-    await waitFor(() => expect(screen.getByText('Northwind Traders')).toBeTruthy());
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'DRAFT' } });
-    await waitFor(() => expect(screen.getByText('Contoso Logistics')).toBeTruthy());
-    expect(screen.queryByText('Northwind Traders')).toBeNull();
-  });
-
-  it('a draft shows the review banner and approve publishes it', async () => {
-    renderAt('/items/itm_00000000000002');
-    await waitFor(() => expect(screen.getByText(/Awaiting review/)).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: /Approve/ }));
-    await waitFor(() => expect(approveItem).toHaveBeenCalledWith('itm_00000000000002'));
-    expect(rejectItem).not.toHaveBeenCalled();
-  });
-
-  it('a viewer sees the draft banner without the review actions', async () => {
-    const viewer: User = { ...me, role: 'VIEWER', isAdmin: false };
-    render(
-      <CurrentUserContext.Provider value={viewer}>
-        <MemoryRouter initialEntries={['/items/itm_00000000000002']}>
-          <App />
-        </MemoryRouter>
-      </CurrentUserContext.Provider>,
-    );
-    await waitFor(() => expect(screen.getByText(/Awaiting review/)).toBeTruthy());
-    expect(screen.queryByRole('button', { name: /Approve/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Reject/ })).toBeNull();
+  it('people renders the user registry', async () => {
+    renderAt('/users');
+    await waitFor(() => expect(screen.getByText('Ada Admin')).toBeTruthy());
   });
 
   it('admin screens render for an administrator', async () => {
@@ -165,15 +95,13 @@ describe('portal routes', () => {
     await waitFor(() => expect(screen.getByText(/Chrome · macOS/)).toBeTruthy());
   });
 
+  it('an unknown route redirects home', async () => {
+    renderAt('/items');
+    expect(await screen.findByRole('heading', { name: /Welcome, Ada/ })).toBeTruthy();
+  });
+
   it('the sidebar hides admin for a viewer and admin routes redirect home', async () => {
-    const viewer: User = { ...me, role: 'VIEWER', isAdmin: false };
-    render(
-      <CurrentUserContext.Provider value={viewer}>
-        <MemoryRouter initialEntries={['/admin/api-keys']}>
-          <App />
-        </MemoryRouter>
-      </CurrentUserContext.Provider>,
-    );
+    renderAt('/admin/api-keys', { ...me, role: 'VIEWER', isAdmin: false });
     expect(screen.queryByText('API keys')).toBeNull();
     expect(await screen.findByRole('heading', { name: /Welcome, Ada/ })).toBeTruthy();
   });

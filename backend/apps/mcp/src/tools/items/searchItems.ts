@@ -2,10 +2,10 @@
 // so the MCP and GraphQL surfaces cannot disagree, and so the caller's roster
 // visibility applies identically.
 import { LIVE_STATUSES, type ItemStatus } from '@libs/items';
-import { READ_ONLY } from '../mcp/annotations';
-import type { ToolDefinition, ToolResult } from '../mcp/tools';
-import { resolvers } from '../container';
-import { str, strArray } from './format';
+import { READ_ONLY } from '../../mcp/annotations';
+import type { ToolDefinition, ToolResult } from '../../mcp/tools';
+import { itemsResolver } from './resolver';
+import { str, strArray } from '../format';
 
 export const searchItems: ToolDefinition = {
   name: 'searchItems',
@@ -28,7 +28,7 @@ export const searchItems: ToolDefinition = {
     // The assistant reads live rows only; DRAFT / REJECTED are reviewed in the portal, never searched from here.
     const status = strArray(args.status).filter((s): s is ItemStatus => (LIVE_STATUSES as readonly string[]).includes(s));
     const filter = { search: str(args.search), status, category: strArray(args.category) };
-    const res = await resolvers.items().items({ filter, limit }, null, ctx.identity);
+    const res = await itemsResolver().items({ filter, limit }, null, ctx.identity);
     const base = (process.env.PORTAL_APP_URL ?? '').replace(/\/+$/, '');
     const rows = res.items.map((i) => ({ ...i, url: base ? `${base}/items/${i.id}` : null }));
     const lines = rows.map(

@@ -136,6 +136,16 @@ type AppNotification @aws_iam @aws_lambda {
   createdAt: AWSDateTime!
 }
 
+"One run of the Hub -> Glean indexing worker."
+type IndexRun @aws_iam @aws_lambda {
+  id: ID!
+  type: String!
+  status: String!
+  startedAt: AWSDateTime!
+  completedAt: AWSDateTime
+  processed: Int
+}
+
 # example domain -----------------------------------------------------------
 # One entity exercising every platform path. Replace with your domain.
 
@@ -188,16 +198,6 @@ input ItemInput {
   status: ItemStatus
 }
 
-"One run of the Hub -> Glean indexing worker."
-type IndexRun @aws_iam @aws_lambda {
-  id: ID!
-  type: String!
-  status: String!
-  startedAt: AWSDateTime!
-  completedAt: AWSDateTime
-  processed: Int
-}
-
 # root ---------------------------------------------------------------------
 
 type Query @aws_iam @aws_lambda {
@@ -217,6 +217,8 @@ type Query @aws_iam @aws_lambda {
   apiKeys: [ApiKey!]!
 
   gleanConnection: GleanConnection!
+  "Admin: recent runs of the Hub -> Glean indexing worker."
+  gleanIndexRuns(limit: Int = 20): [IndexRun!]!
 
   fetchLogos(domains: [String!]!): [DomainLogo!]!
 
@@ -228,8 +230,6 @@ type Query @aws_iam @aws_lambda {
   items(filter: ItemFilter, limit: Int = 50, offset: Int): ItemConnection!
   item(id: ID!): Item
   itemCategories: [String!]!
-  "Admin: recent Glean indexing runs."
-  gleanIndexRuns(limit: Int = 20): [IndexRun!]!
 }
 
 type Mutation @aws_iam @aws_lambda {
@@ -255,6 +255,8 @@ type Mutation @aws_iam @aws_lambda {
   gleanDisconnect: GleanConnection!
   "Admin: switch the shared Glean tenant base URL."
   gleanSetEndpoint(baseUrl: String!): GleanConnection!
+  "Admin: ask the indexing worker for a full re-index into the Glean datasource (async); false when no worker is wired."
+  triggerGleanIndex(full: Boolean = true): Boolean!
 
   setWarmerConfig(enabled: Boolean, concurrency: Int): WarmerConfig!
 
@@ -267,8 +269,6 @@ type Mutation @aws_iam @aws_lambda {
   approveItem(id: ID!): Item!
   "Decline a DRAFT (-> REJECTED, hidden, kept for audit). A non-DRAFT id is returned unchanged."
   rejectItem(id: ID!): Item!
-  "Admin: run a full re-index of items into the Glean datasource (async)."
-  triggerGleanIndex(full: Boolean = true): Boolean!
 }
 
 schema {

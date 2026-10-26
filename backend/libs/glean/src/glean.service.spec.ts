@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { AuroraService } from '@libs/aurora';
-import { GleanService } from './glean.service';
+import { GleanService, isGleanHostedPhotoUrl } from './glean.service';
 
 // Fake AuroraService: a queue of query results (per call, in order) and a
 // spy for execute. Unqueued query() calls resolve []. iso8601 is used by
@@ -350,6 +350,28 @@ function imageResp(status: number, bytes: number, contentType = 'image/jpeg'): R
     arrayBuffer: async () => new Uint8Array(bytes).buffer,
   } as unknown as Response;
 }
+
+describe('isGleanHostedPhotoUrl', () => {
+  const base = 'https://tenant-be.glean.example';
+
+  it('matches the tenant backend host and its sibling hosts under the same parent domain', () => {
+    expect(isGleanHostedPhotoUrl('https://tenant-be.glean.example/people/p1/photo', base)).toBe(true);
+    expect(isGleanHostedPhotoUrl('https://tenant.glean.example/api/v1/photo', base)).toBe(true);
+    expect(isGleanHostedPhotoUrl('https://glean.example/x.png', base)).toBe(true);
+  });
+
+  it('does not match external CDNs or a look-alike path on another host', () => {
+    expect(isGleanHostedPhotoUrl('https://lh3.googleusercontent.com/a/photo', base)).toBe(false);
+    expect(isGleanHostedPhotoUrl('https://evil.example/.glean.example/x.png', base)).toBe(false);
+    expect(isGleanHostedPhotoUrl('https://notglean.example/x.png', base)).toBe(false);
+  });
+
+  it('matches only the exact host when the base has no parent domain to share', () => {
+    expect(isGleanHostedPhotoUrl('https://glean.corp/photo', 'https://glean.corp')).toBe(true);
+    expect(isGleanHostedPhotoUrl('https://other.corp/photo', 'https://glean.corp')).toBe(false);
+    expect(isGleanHostedPhotoUrl('not a url', base)).toBe(false);
+  });
+});
 
 describe('GleanService.fetchPersonPhotoBytes', () => {
   it('prefers external CDN URLs and skips hosted /photo (avoids 403)', async () => {

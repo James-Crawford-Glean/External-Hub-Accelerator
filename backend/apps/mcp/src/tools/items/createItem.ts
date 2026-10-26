@@ -4,10 +4,10 @@
 // confirmation panel (CREATES_RECORDS annotation) is the first gate; the
 // server-side DRAFT state is the one that holds. Idempotent on acting user +
 // name: a retried call returns the pending draft rather than drafting twice.
-import { CREATES_RECORDS } from '../mcp/annotations';
-import type { ToolDefinition, ToolResult } from '../mcp/tools';
-import { resolvers } from '../container';
-import { str, textResult } from './format';
+import { CREATES_RECORDS } from '../../mcp/annotations';
+import type { ToolDefinition, ToolResult } from '../../mcp/tools';
+import { itemsResolver } from './resolver';
+import { str, textResult } from '../format';
 import { CURRENT_USER_EMAIL } from './updateItem';
 
 export const createItem: ToolDefinition = {
@@ -46,7 +46,7 @@ export const createItem: ToolDefinition = {
       website: str(args.website).toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') || null,
     };
     try {
-      const { item, created } = await resolvers.items().draftItem({ input }, null, identity);
+      const { item, created } = await itemsResolver().draftItem({ input }, null, identity);
       const base = (process.env.PORTAL_APP_URL ?? '').replace(/\/+$/, '');
       const link = base ? ` (${base}/items/${item.id})` : '';
       const text = created

@@ -116,7 +116,7 @@ alternatives; micro-optimizations; legacy code the diff does not touch.
 
 ```
 HIGH: Permission check moved out of the resolver
-File: backend/apps/mcp/src/tools/updateItem.ts:41
+File: backend/apps/mcp/src/tools/items/updateItem.ts:41
 Issue: The handler calls authz.requireWrite(ctx.identity) and then runs
 ItemsService.update directly, skipping ItemsResolver.updateItem. The GraphQL
 field still goes through the resolver, so the two surfaces now enforce
@@ -124,13 +124,13 @@ visibility differently.
 Impact: A caller who can see a row through MCP but not through GraphQL (or
 the reverse) once visibility rules change; the write gate is duplicated and
 will drift.
-Fix: Call resolvers.items().updateItem(args, identity) and let the resolver
+Fix: Call itemsResolver().updateItem(args, identity) and let the resolver
 gate; delete the handler-side check.
 ```
 
 ```
 MEDIUM: Tool returns a new field the skill does not mention
-File: backend/apps/mcp/src/tools/searchItems.ts:58, docs/mcp/skills/example/SKILL.md
+File: backend/apps/mcp/src/tools/items/searchItems.ts:58, docs/mcp/skills/example/SKILL.md
 Issue: `rows[].owner.title` is new in structuredContent and the text line, but
 the Find items section still lists name, category, status, owner, website,
 link.

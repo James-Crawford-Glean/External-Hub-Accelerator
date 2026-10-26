@@ -2,10 +2,10 @@
 // by its annotations (not read-only), and on the server side by requireWrite
 // plus the acting-user rule: a connection with no signed-in user must supply
 // currentUserEmail, or the write fails rather than being attributed to nobody.
-import { UPDATES_IN_PLACE } from '../mcp/annotations';
-import type { ToolDefinition, ToolResult } from '../mcp/tools';
-import { resolvers } from '../container';
-import { str, textResult } from './format';
+import { UPDATES_IN_PLACE } from '../../mcp/annotations';
+import type { ToolDefinition, ToolResult } from '../../mcp/tools';
+import { itemsResolver } from './resolver';
+import { str, textResult } from '../format';
 
 export const CURRENT_USER_EMAIL = {
   type: 'string',
@@ -49,7 +49,7 @@ export const updateItem: ToolDefinition = {
     for (const k of ['name', 'category', 'description', 'website', 'status'] as const) if (args[k] !== undefined) input[k] = args[k];
     if (Object.keys(input).length === 0) return textResult('Nothing to change: pass at least one field.', true);
     try {
-      const item = await resolvers.items().updateItem({ id, input }, null, identity);
+      const item = await itemsResolver().updateItem({ id, input }, null, identity);
       return {
         content: [{ type: 'text', text: `Updated ${item.name} (${item.id}): ${Object.keys(input).join(', ')}.` }],
         structuredContent: { record: item, changed: Object.keys(input) },
