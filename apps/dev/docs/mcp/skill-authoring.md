@@ -98,7 +98,7 @@ Keep the provenance suffix on the server side so no tool can drop it;
 
 ### Trigger keyed on the product name
 
-**Symptom.** "Use `<product>` MCP to show which accounts Deloitte has mapped"
+**Symptom.** "Use `<product>` MCP to show which accounts Contoso has mapped"
 made Chat claim the action was not connected. The same question asked plainly,
 without naming the product, got a correct live answer. The action was enabled
 the whole time.
@@ -163,7 +163,7 @@ will ask about next.
 
 ### A value the description forgot
 
-**Symptom.** Users asking about the EMERGING partner team were rarely answered
+**Symptom.** Users asking about one particular partner team were rarely answered
 with the `team` filter, even though the server accepted it.
 
 **Cause.** The `team` field's description listed five of the six team values.
@@ -197,7 +197,7 @@ presentation, edge cases) lives in the skill section for that tool.
 ### A skill with instructions and nothing to call
 
 **Symptom.** After Glean Chat moved to skill-based tool access, a plain question
-("who is the partner manager for WWT?") matched the hand-authored skill, which
+("who is the partner manager for Northwind?") matched the hand-authored skill, which
 then reported the tools as unavailable.
 
 **Cause.** The hand-authored skill had no tools attached. The auto-generated

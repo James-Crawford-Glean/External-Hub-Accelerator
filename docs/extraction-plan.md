@@ -20,7 +20,7 @@ Internal review first, then publication together.
 | Aurora | Stays. Aurora Serverless v2 + Data API is the primary store; DynamoDB for identity, keys, caches, run logs. |
 | Partner sandbox | Deferred. `live/partners` and `modules/partner-sandbox` are not copied. The Indexing API client inside `apps/api/src/sandbox-access` is extracted into a standalone lib regardless. |
 | Fork vs copy | Clean copy. A GitHub fork carries all history (deleted partner data, screenshots, rotated secrets) and cannot change visibility independently of the private parent. The new repo receives the sanitized tree as its first commit. |
-| Visibility | Internal (private) first; publish after review with Alex. License to be chosen before publication (`apps/ps/LICENSE` is MIT, Glean Technologies Inc; the repo root has none). |
+| Visibility | Internal (private) first; publish after internal review. License to be chosen before publication (`apps/ps/LICENSE` is MIT, Glean Technologies Inc; the repo root has none). |
 | Wait for OAuth / email sync? | No. MCP OAuth is implemented and enabled in `js-dev`; the accelerator ships it as the default path. Email/calendar sync has no design yet; the accelerator ships the extension point and the paper marks it planned. |
 | Verification account | A new, empty member account in the AWS org (requested from the org admin; the requester's management-account role is billing-only). Until it exists, verification is static: `terraform validate`, Terragrunt input checks, unit tests, sanitization guard. |
 
@@ -105,7 +105,7 @@ Each lands as its own PR against the source repository under a top-level `accele
 ## Open items
 
 - Empty AWS member account and Glean tenant settings (OAuth AS, DCR allowlist, indexing token) for increment 5.
-- Target repo: https://github.com/James-Crawford-Glean/External-Hub-Accelerator (created 2026-10-15). Currently **public** and under a personal account; the agreed sequence is private until Alex has reviewed, and organization ownership so the repo outlives the internship. Both are settable before the first import.
+- Target repo: https://github.com/James-Crawford-Glean/External-Hub-Accelerator (created 2026-10-15). Currently **public** and under a personal account; the agreed sequence is private until internal review is complete, and organization ownership so the repo outlives the internship. Both are settable before the first import.
 - License choice before publication.
 - Email/calendar sync: a one-page design so the paper's planned section describes an intended architecture, and so the source project's implementation lands in a domain-neutral lib the accelerator can take unchanged.
 - Promote MCP OAuth beyond `js-dev` in the source project so the paper can cite it as the production path.

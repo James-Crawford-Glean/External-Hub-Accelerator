@@ -119,7 +119,7 @@ const SET_ENDPOINT = `mutation($baseUrl: String!) {
   gleanSetEndpoint(baseUrl: $baseUrl) { ${CONNECTION_FIELDS} }
 }`;
 
-/** Switch the active Glean tenant (e.g. sandbox -> scio-prod). Disconnects everyone. */
+/** Switch the active Glean tenant (e.g. a sandbox tenant -> production). Disconnects everyone. */
 export async function gleanSetEndpoint(baseUrl: string): Promise<GleanConnection> {
   const data = await gql<{ gleanSetEndpoint: GleanConnection }>(SET_ENDPOINT, { baseUrl });
   return data.gleanSetEndpoint;

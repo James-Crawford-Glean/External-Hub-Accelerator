@@ -16,8 +16,8 @@ import {
 
 // The Data API caps a single statement's *result set* at 1MB (independent of the caller's
 // GraphQL selection — AppSync applies the selection after the Lambda already built the full
-// result). Any query that fans a jsonb_agg/array_agg subquery out per row (accounts' partner
-// overlap, mappings' matched account, opportunities' embedded account) can cross that cap
+// result). Any query that fans a jsonb_agg/array_agg subquery out per row (a record's
+// embedded related rows, a join rendered as an array per row) can cross that cap
 // while looking fine in dev with small seed data — the byte cost scales with row count x
 // subquery fan-out, not with anything the caller controls. Surfacing the raw SDK exception
 // leaves the caller with no actionable next step and no server-side breadcrumb linking the

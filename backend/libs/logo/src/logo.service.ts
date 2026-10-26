@@ -1,7 +1,7 @@
 // Logo enrichment — domain-keyed crawl -> extract -> classify -> store -> cache.
-// Ports lib/logo_cache.py (S3 store + ranked manifest), lib/logo_sources.py (the
-// multi-source resolve chain), and the enrichment_cache slice of lib/cache.py (DDB
-// stale-while-revalidate). The pure crawl/parse/rank/sniff logic lives in ./logo.extract.
+// S3 store + ranked manifest, the multi-source resolve chain, and the enrichment_cache
+// slice (DDB stale-while-revalidate). The pure crawl/parse/rank/sniff logic lives in
+// ./logo.extract.
 //
 // Cache key is the normalized domain (e.g. "glean.com"); the S3 object key is
 // sha256-truncated so the URL reveals nothing about which domain it belongs to.
@@ -28,7 +28,7 @@ import {
 export const LOGOS_KEY_PREFIX = 'logos'; // all logo objects live under this prefix in the SPA bucket
 const CACHE_CONTROL = 'public, max-age=2592000'; // 30d browser/edge cache; CloudFront picks this up
 
-// enrichment_cache SWR window (lib/cache.py: enrichment_cache.logo = 30d).
+// enrichment_cache SWR window (enrichment_cache.logo = 30d).
 const LOGO_TTL_S = 2_592_000;
 const STALE_MULTIPLIER = 4;
 export const FRESH = 'fresh';

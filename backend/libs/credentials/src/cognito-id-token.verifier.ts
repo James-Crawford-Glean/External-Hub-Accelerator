@@ -7,9 +7,9 @@ export interface CognitoJwtConfig {
   issuer: string;
   clientId: string;
   /**
-   * When set, only tokens whose email is at this domain are accepted; anything else
-   * verifies cryptographically but is rejected. This is the single enforcement point
-   * for "only @glean.com can access" and also revokes any non-glean session minted
+   * When set, only tokens whose email is at one of these domains are accepted; anything
+   * else verifies cryptographically but is rejected. This is the single enforcement point
+   * for the email-domain allowlist and also revokes any out-of-domain session minted
    * before it was enforced. Case-insensitive; empty/undefined disables the check.
    */
   allowedEmailDomain?: string; // comma-separated list; unset = any domain

@@ -11,8 +11,7 @@ import { MIGRATIONS } from './migrations.generated';
 const auroraOnce = once(() => new AuroraService(new RDSDataClient({}), auroraConfigFromEnv()));
 
 /** Split DDL into statements on top-level ';', after stripping block and line
- *  comments. Migrations are plain DDL (no dollar-quoted function bodies); mirror
- *  migrate.py's _split exactly. */
+ *  comments. Migrations are plain DDL (no dollar-quoted function bodies). */
 export function split(sql: string): string[] {
   const noBlock = sql.replace(/\/\*[\s\S]*?\*\//g, '');
   const noLine = noBlock
