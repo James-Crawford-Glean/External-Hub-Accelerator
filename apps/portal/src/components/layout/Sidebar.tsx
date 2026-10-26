@@ -1,30 +1,28 @@
-// Navigation. Items are a static list gated by the caller's capabilities; add
-// your domain's screens to WORKSPACE.
-import type { ReactNode } from 'react';
+// Navigation: a static list gated by the caller's capabilities. The domain's
+// screens come from its registration (src/domain.tsx).
 import { NavLink } from 'react-router-dom';
-import { Boxes, Cloud, Home, KeyRound, Link2, LogIn, Users, UserCog } from 'lucide-react';
+import { Cloud, Home, KeyRound, Link2, LogIn, Users, UserCog } from 'lucide-react';
 import { GleanLogo } from '../ui/GleanLogo';
 import { Avatar } from '../ui/Avatar';
 import { useCurrentUser } from '../../data/useCurrentUser';
+import { DOMAIN } from '../../domain';
 import { canAdmin } from '../../lib/capabilities';
+import type { DomainNavItem } from '../../lib/domain';
 import { roleLabel } from '../../lib/labels';
 
-interface Item {
-  to: string;
-  label: string;
-  icon: ReactNode;
+interface Entry extends DomainNavItem {
   exact?: boolean;
 }
 
 const ICON = 16;
 
-const WORKSPACE: Item[] = [
+const WORKSPACE: Entry[] = [
   { to: '/', label: 'Home', icon: <Home size={ICON} />, exact: true },
-  { to: '/items', label: 'Items', icon: <Boxes size={ICON} /> },
+  ...DOMAIN.nav,
   { to: '/users', label: 'People', icon: <Users size={ICON} /> },
 ];
 
-const ADMIN: Item[] = [
+const ADMIN: Entry[] = [
   { to: '/admin/roles', label: 'Roles & access', icon: <UserCog size={ICON} /> },
   { to: '/admin/api-keys', label: 'API keys', icon: <KeyRound size={ICON} /> },
   { to: '/admin/glean', label: 'Glean', icon: <Link2 size={ICON} /> },
@@ -68,7 +66,7 @@ export function Sidebar() {
   );
 }
 
-function SidebarLink({ to, label, icon, exact }: Item) {
+function SidebarLink({ to, label, icon, exact }: Entry) {
   return (
     <NavLink to={to} end={exact} className={({ isActive }) => `ps-nav-link${isActive ? ' ps-nav-link--active' : ''}`}>
       {icon}

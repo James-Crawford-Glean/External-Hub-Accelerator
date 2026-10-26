@@ -252,3 +252,26 @@ function jsonString(data: string): string {
     return '';
   }
 }
+
+/** One run of the Hub -> Glean indexing worker (admin). */
+export interface IndexRun {
+  id: string;
+  type: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  processed: number | null;
+}
+
+export async function fetchGleanIndexRuns(limit = 20): Promise<IndexRun[]> {
+  const data = await gql<{ gleanIndexRuns: IndexRun[] }>(`query IndexRuns($limit: Int) { gleanIndexRuns(limit: $limit) { id type status startedAt completedAt processed } }`, {
+    limit,
+  });
+  return data.gleanIndexRuns;
+}
+
+/** Asks the indexing worker for a full re-index; false when no worker is wired to the API. */
+export async function triggerGleanIndex(): Promise<boolean> {
+  const data = await gql<{ triggerGleanIndex: boolean }>(`mutation TriggerGleanIndex { triggerGleanIndex(full: true) }`);
+  return data.triggerGleanIndex;
+}

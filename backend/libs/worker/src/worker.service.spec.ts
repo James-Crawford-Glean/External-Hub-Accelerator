@@ -10,7 +10,7 @@ describe('WorkerService.invokeAsync', () => {
   it('sends an Event invocation with a JSON-encoded payload and returns true', async () => {
     const { client, send } = fakeClient(() => ({}));
     const svc = new WorkerService(client);
-    const ok = await svc.invokeAsync('my-fn', { entity: 'sf_accounts', id: 'acc_1' });
+    const ok = await svc.invokeAsync('my-fn', { entity: 'things', id: 'thg_1' });
     expect(ok).toBe(true);
     expect(send).toHaveBeenCalledTimes(1);
     const cmd = send.mock.calls[0][0];
@@ -18,7 +18,7 @@ describe('WorkerService.invokeAsync', () => {
     expect(cmd.input.FunctionName).toBe('my-fn');
     expect(cmd.input.InvocationType).toBe('Event');
     expect(Buffer.from(cmd.input.Payload).toString('utf-8')).toBe(
-      JSON.stringify({ entity: 'sf_accounts', id: 'acc_1' }),
+      JSON.stringify({ entity: 'things', id: 'thg_1' }),
     );
   });
 

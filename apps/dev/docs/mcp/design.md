@@ -301,9 +301,11 @@ Lambda, so "rate limited" is read from the access log's `429`, not from
 
 ## Adding a tool
 
-Write `backend/apps/mcp/src/tools/<name>.ts` exporting a `ToolDefinition`:
-JSON Schema input (with `additionalProperties: false`), annotations, and a
-handler that calls a resolver class from `apps/mcp/src/container.ts`. List it in
-`apps/mcp/src/mcp/tools.ts`. `routing.spec.ts` pins the provenance note on every
+Write `backend/apps/mcp/src/tools/<domain>/<name>.ts` exporting a
+`ToolDefinition`: JSON Schema input (with `additionalProperties: false`),
+annotations, and a handler that calls a resolver class built from the services
+`apps/mcp/src/container.ts` exports (the example's is
+`tools/items/resolver.ts`). List it in `apps/mcp/src/domain.ts`; `mcp/tools.ts`
+appends the domain's tools to the platform's. `routing.spec.ts` pins the provenance note on every
 advertised description; `local-demo.spec.ts` runs the server end to end against
 embedded Postgres. Re-sync the connection in your MCP host afterwards.

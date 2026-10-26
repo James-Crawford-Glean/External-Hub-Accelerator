@@ -1,6 +1,38 @@
 // Example domain: items.
 import { cleanFilter, gql, type Connection } from './graphql';
-import type { IndexRun, Item, ItemInput, ItemStatus } from '../../data/types';
+import type { Role, User } from '../../data/types';
+
+/** DRAFT and REJECTED are the review states of an assistant-initiated create; ACTIVE and ARCHIVED are live. */
+export type ItemStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED' | 'REJECTED';
+
+export interface Item {
+  id: string;
+  externalId: string | null;
+  name: string;
+  category: string | null;
+  status: ItemStatus;
+  description: string | null;
+  website: string | null;
+  owner: Pick<User, 'id' | 'email' | 'name'> | null;
+  visibilityRole: Role | null;
+  source: string | null;
+  syncedAt: string | null;
+  indexedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ItemInput {
+  name?: string;
+  category?: string | null;
+  description?: string | null;
+  website?: string | null;
+  ownerUserId?: string | null;
+  visibilityRole?: Role | null;
+  status?: ItemStatus;
+}
 
 export interface ItemFilter {
   search?: string;
@@ -59,16 +91,4 @@ export async function approveItem(id: string): Promise<Item> {
 export async function rejectItem(id: string): Promise<Item> {
   const data = await gql<{ rejectItem: Item }>(`mutation RejectItem($id: ID!) { rejectItem(id: $id) { ${ITEM_FIELDS} } }`, { id });
   return data.rejectItem;
-}
-
-export async function fetchGleanIndexRuns(limit = 20): Promise<IndexRun[]> {
-  const data = await gql<{ gleanIndexRuns: IndexRun[] }>(`query IndexRuns($limit: Int) { gleanIndexRuns(limit: $limit) { id type status startedAt completedAt processed } }`, {
-    limit,
-  });
-  return data.gleanIndexRuns;
-}
-
-export async function triggerGleanIndex(): Promise<boolean> {
-  const data = await gql<{ triggerGleanIndex: boolean }>(`mutation TriggerGleanIndex { triggerGleanIndex(full: true) }`);
-  return data.triggerGleanIndex;
 }

@@ -44,6 +44,16 @@ describe('items: DRAFT -> review state machine', () => {
 
   let draftId: string;
 
+  it('the example tools register through the domain seam: a viewer sees the read tool only, an editor sees all three', async () => {
+    const catalog = async (identity: Record<string, unknown>) => {
+      const res = await handleRpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { identity });
+      return (res?.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name);
+    };
+    expect(await catalog(viewer)).toEqual(expect.arrayContaining(['searchItems']));
+    expect(await catalog(viewer)).not.toEqual(expect.arrayContaining(['createItem']));
+    expect(await catalog(editor)).toEqual(expect.arrayContaining(['searchItems', 'createItem', 'updateItem']));
+  });
+
   it('the MCP createItem tool writes a DRAFT owned by the acting user and notifies them', async () => {
     const res = await call('createItem', { name: 'Draft Widget', category: 'Supplier' }, editor);
     const result = res?.result as { isError?: boolean; structuredContent: { record: { id: string; status: string; owner: { email: string } } } };

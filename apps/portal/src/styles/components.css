@@ -315,7 +315,7 @@
   }
 }
 /* Metric strips cascade in on mount, like apple's stat tiles. Sibling-based
-   stagger so it covers any strip (.ps-grid, .partner-summary-grid, etc.). */
+   stagger so it covers any strip (.ps-grid, a metrics row, etc.). */
 .ps-metric {
   animation: ps-rise-in var(--motion-slow) var(--ease-out) both;
 }
@@ -503,14 +503,6 @@
      rather than recreating them, so this plays once — not on every sort. */
   animation: ps-row-in var(--motion-base) var(--ease-out) both;
 }
-/* Each row is its own stacking context (the mount animation above), which would trap
-   an open dropdown/typeahead panel beneath later rows. Clearing the animation drops that
-   stacking context so the panel's own z-index resolves against the table — WebKit ignores
-   z-index on `<tr>`, so lifting the row alone leaves the panel trapped there. The lift
-   still orders the row ahead of its siblings where positioned rows are honored.
-   `:focus-within` covers native focus; `:has(.typeahead--open)` and
-   `:has(.sandbox-actions--open)` keep the row lifted while a panel is open
-   even if the window loses focus (blur drops `:focus-within` but not the open state). */
 
 .ps-table tbody tr:nth-child(1) { animation-delay: 0ms; }
 .ps-table tbody tr:nth-child(2) { animation-delay: 28ms; }
@@ -591,36 +583,12 @@
   opacity: 1;
 }
 
-/* Upcoming (amber) / completed (green) status indicator on each activity row. */
-
 .ps-table__caption {
   text-align: left;
   padding: 16px;
   color: var(--color-ink-subtle);
   font-size: var(--text-xs);
 }
-
-/* ---------- Activities table (fixed geometry) ----------
-   Re-sorting must never reflow row geometry. `table-layout: fixed` plus the
-   <colgroup> widths lock the columns, and every cell is clamped to its
-   designed line count: text never wraps, it truncates with an ellipsis. With
-   uniform structure + no wrapping, all rows render at exactly one height, so
-   the column you clicked stays put. */
-.ps-table--activities {
-  table-layout: fixed;
-}
-.ps-table--activities td {
-  height: 60px;
-  padding-top: 0;
-  padding-bottom: 0;
-  overflow: hidden;
-}
-
-/* Stacked cell: vertically-centred title + optional subline, both clamped. */
-
-/* Owner: avatar + SE tag stay fixed, the name absorbs overflow. */
-
-/* Partner cell: logo never shrinks; name + meta truncate within the column. */
 
 /* ---------- Pagination ---------- */
 .ps-pagination {
@@ -712,12 +680,6 @@
   color: var(--color-ink-faint);
   font-size: var(--text-xs);
 }
-
-/* ---------- Tabs ---------- */
-
-/* ---------- Logo tile ---------- */
-
-/* Tiles lift slightly when their row/link/card is hovered. */
 
 /* ---------- Empty state ---------- */
 .ps-empty {
@@ -823,18 +785,12 @@
   gap: 2px;
 }
 
-/* Chart-area placeholder for the partnership-metrics card. */
-
 /* Small inline "Refreshing…" pill shown on the calendar during a background refetch. */
-
-/* Saved-view list rows — read as clickable buttons (hover fill + hairline). */
-
-/* ---------- Progress steps ---------- */
 
 /* ---------- Progress bar ---------- */
 
 /* Indeterminate "filling" bar for async jobs with no real progress signal
-   (e.g. the account-mapping match worker): eases toward ~90% and holds until
+   (e.g. a long-running import worker): eases toward ~90% and holds until
    the job completes and the bar is removed. */
 
 @keyframes ps-progress-fill {
@@ -847,7 +803,7 @@
 }
 
 /* Processing panel — spinner + filling bar shown while an async step runs
-   (upload parse/match on the mapping review step). */
+   (parsing an upload before its review step). */
 
 /* ---------- Section header ---------- */
 
@@ -994,12 +950,6 @@
 /* Batch dialog is height-locked (90vh) — keep the body from scrolling as a
    whole so the review table absorbs the leftover space instead. */
 
-/* ---------- Batch activity dialog ---------- */
-
-/* The shared row-in animation animates transform, which makes every row its own
-   stacking context — that traps an open partner dropdown behind the rows below.
-   The review table is short and static, so drop the animation here. */
-
 /* ---------- Toast ---------- */
 .ps-toast-wrap {
   position: fixed;
@@ -1058,13 +1008,6 @@
   color: #fff;
 }
 
-/* ---------- Export progress overlay ---------- */
-
-@keyframes ps-export-indeterminate {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(320%); }
-}
-
 @keyframes ps-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -1079,244 +1022,6 @@
 .ps-form-grid > .ps-field--full {
   grid-column: 1 / -1;
 }
-
-/* ---------- Utility ---------- */
-
-.ps-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.ps-row--between {
-  justify-content: space-between;
-}
-.ps-row--wrap {
-  flex-wrap: wrap;
-}
-.ps-grid {
-  display: grid;
-  gap: var(--space-4);
-}
-.ps-grid--cols-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-.ps-grid--cols-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-.ps-grid--cols-4 {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.ps-text-strong {
-  color: var(--color-ink-strong);
-}
-.ps-text-muted {
-  color: var(--color-ink-muted);
-}
-.ps-text-subtle {
-  color: var(--color-ink-subtle);
-}
-.ps-text-mono {
-  font-family: var(--font-mono);
-}
-.ps-text-numeric {
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 1100px) {
-  .ps-grid--cols-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .ps-grid--cols-3 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 720px) {
-  .ps-grid--cols-4,
-  .ps-grid--cols-3,
-  .ps-grid--cols-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ---------- API keys ---------- */
-
-/* Page-level security note above the table. */
-
-/* Name + masked secret cell. */
-
-/* Row actions menu. */
-
-/* Create dialog — selectable option cards. */
-.apikey-choice {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.apikey-option__head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.apikey-option__icon {
-  display: inline-flex;
-  color: var(--color-ink-muted);
-}
-
-.apikey-option__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-ink-strong);
-}
-.apikey-option__check {
-  margin-left: auto;
-  color: var(--color-brand);
-}
-.apikey-option__desc {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--color-ink-muted);
-}
-
-/* Inline warning (elevated-key notice + reveal warning). */
-.apikey-warn {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 11px 13px;
-  margin-top: 14px;
-  background: var(--color-warning-soft);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
-  border-radius: var(--radius-md);
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--color-warning-strong);
-}
-.apikey-warn--full {
-  grid-column: 1 / -1;
-  margin-top: 0;
-}
-.apikey-warn__icon {
-  flex-shrink: 0;
-  color: var(--color-warning);
-  margin-top: 1px;
-}
-.apikey-warn strong {
-  color: var(--color-warning-strong);
-}
-
-/* Reveal-once secret. */
-.apikey-reveal__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-ink-strong);
-  margin-bottom: 8px;
-}
-.apikey-reveal__secret {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 12px 12px 14px;
-  background: var(--color-surface-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-.apikey-reveal__secret code {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--color-ink-strong);
-  word-break: break-all;
-}
-
-/* Scope multi-select: full-width rows so each scope's description reads clearly. */
-.apikey-choice--stack {
-  grid-template-columns: 1fr;
-}
-
-/* ---------- Typeahead controls ---------- */
-
-/* Keyboard-highlighted row (kept in sync with the mouse via onMouseEnter). */
-
-/* Matched query substring inside a label/subtext. */
-
-/* People initials chip, mirrors .ps-avatar at list scale. */
-
-/* Loading skeleton rows (initial async load). */
-
-@keyframes ps-typeahead-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-/* ---------- Outreach composer ---------- */
-
-/* Gmail-style compose preview */
-
-@keyframes outreach-shimmer {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0 50%; }
-}
-
-/* Live-stream preview: the draft body filling in token-by-token, read-only
-   until the stream completes (then it swaps to the editable textarea). */
-
-@keyframes outreach-blink {
-  50% { opacity: 0; }
-}
-
-/* Glean reasoning ("thinking") panel — streamed agent progress while drafting,
-   then a collapsible "Thought for Ns" summary. Sits inside the mail preview,
-   between the subject line and the body. */
-
-@keyframes outreach-think-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(52, 60, 237, 0.4); }
-  70% { box-shadow: 0 0 0 7px rgba(52, 60, 237, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(52, 60, 237, 0); }
-}
-
-/* Shimmer the title while Glean works — the gen-AI "thinking" cue, in both the
-   expanded header and the collapsed cycling bar. */
-
-@keyframes outreach-think-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-/* Collapsed + working: each new step rises into the bar (cycle-in, once per
-   step) while the shimmer keeps looping underneath it. */
-
-@keyframes outreach-think-cycle {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes outreach-think-step-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-/* Vertical timeline connecting the step dots. */
-
-/* Cloud/GSI internal hand-off banner at the top of the composer. */
-
-/* Draft-source footer note: subtle info icon with an upward hover tooltip. */
-
-/* ---------- Outreach setup (partner + recipient pickers) ---------- */
-
-/* The container owns the focus ring; suppress the input's own so they don't double up. */
-
-/* Partner-picker group headers ("Ready to reach out" / "No contacts on file"). */
-
-/* Recipient-step alliance panel: locked internal recipient + explainer. */
-
-/* Reaching-out-to card header + Change partner action */
-
-/* Add-contact menu on the To row */
 
 /* ---------- Utility ---------- */
 

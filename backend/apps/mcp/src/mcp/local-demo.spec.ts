@@ -3,6 +3,7 @@
 import { pgAurora, type PgAurora } from '@libs/testkit';
 import { setAuroraForLocal } from '../container';
 import { handleRpc } from './server';
+import { TOOLS } from './tools';
 
 describe('MCP server end to end (pglite)', () => {
   let pg: PgAurora;
@@ -39,8 +40,8 @@ describe('MCP server end to end (pglite)', () => {
   });
 
   it('tools/list matches the caller: an editor sees every tool, a viewer and a read-scoped key see reads only', async () => {
-    const reads = ['listUsers', 'searchItems', 'whoAmI'];
-    const all = ['createItem', ...reads, 'updateItem'].sort();
+    const all = Object.keys(TOOLS).sort();
+    const reads = all.filter((n) => TOOLS[n]?.annotations.readOnlyHint);
     expect(await catalogFor(user, 20)).toEqual(all);
     expect(await catalogFor(viewer, 21)).toEqual(reads);
     expect(await catalogFor(readKey, 22)).toEqual(reads);

@@ -1,15 +1,12 @@
 // MCP tool registry. Each tool is a self-describing unit: a JSON Schema for its
-// input plus a handler. Tools register in ALL; the server dispatches tools/call
-// by name. Add a domain tool by writing apps/mcp/src/tools/<name>.ts and
-// listing it here.
+// input plus a handler. The platform tools are listed here; the domain's come
+// from ../domain.ts. The server dispatches tools/call by name.
 import type { Identity } from '@libs/authz';
 import type { ToolAnnotations } from './annotations';
 import type { JsonSchema } from './validate';
 import { whoAmI } from '../tools/whoAmI';
 import { listUsers } from '../tools/listUsers';
-import { searchItems } from '../tools/searchItems';
-import { createItem } from '../tools/createItem';
-import { updateItem } from '../tools/updateItem';
+import { DOMAIN_TOOLS } from '../domain';
 
 /** MCP tool-call result: structured content plus a short human-readable summary. */
 export interface ToolResult {
@@ -69,8 +66,8 @@ export const SUPPLEMENTARY_CONTEXT_NOTE =
 const advertisedDescription = ({ description, annotations }: ToolDefinition): string =>
   [description, LIVE_DATA_NOTE, annotations.readOnlyHint ? SUPPLEMENTARY_CONTEXT_NOTE : ''].filter(Boolean).join(' ');
 
-// Platform tools, then the example domain's. Replace the latter with yours.
-const ALL: ToolDefinition[] = [whoAmI, listUsers, searchItems, createItem, updateItem];
+const PLATFORM_TOOLS: readonly ToolDefinition[] = [whoAmI, listUsers];
+const ALL: readonly ToolDefinition[] = [...PLATFORM_TOOLS, ...DOMAIN_TOOLS];
 
 export const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.fromEntries(ALL.map((t) => [t.name, t]));
 const TOOLS_BY_LOWER: Readonly<Record<string, ToolDefinition>> = Object.fromEntries(

@@ -120,12 +120,12 @@ describe('tools/call argument gate', () => {
     }
   });
 
-  it('a Glean-injected _user_goal on a write passes the gate and never reaches the handler', async () => {
-    const tool = TOOLS.updateItem as ToolDefinition;
-    const handler = jest.spyOn(tool, 'handler').mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], structuredContent: { record: {} } });
+  it('a host-injected _user_goal passes the gate and never reaches the handler', async () => {
+    const tool = TOOLS.listUsers as ToolDefinition;
+    const handler = jest.spyOn(tool, 'handler').mockResolvedValue({ content: [{ type: 'text', text: 'ok' }], structuredContent: { total: 0, rows: [] } });
     try {
-      const res = await call('updateItem', { id: 'itm_1', status: 'ARCHIVED', _user_goal: 'archive Northwind' });
-      expect(handler).toHaveBeenCalledWith({ id: 'itm_1', status: 'ARCHIVED' }, { identity });
+      const res = await call('listUsers', { search: 'ola', _user_goal: 'who is Ola' });
+      expect(handler).toHaveBeenCalledWith({ search: 'ola' }, { identity });
       expect(res?.error).toBeUndefined();
     } finally {
       handler.mockRestore();
@@ -133,10 +133,10 @@ describe('tools/call argument gate', () => {
   });
 
   it('an unknown extra argument alongside _user_goal is still a -32602', async () => {
-    const tool = TOOLS.createItem as ToolDefinition;
+    const tool = TOOLS.listUsers as ToolDefinition;
     const handler = jest.spyOn(tool, 'handler');
     try {
-      const res = await call('createItem', { name: 'Fabrikam', _user_goal: 'add Fabrikam', bogus: true });
+      const res = await call('listUsers', { search: 'ola', _user_goal: 'who is Ola', bogus: true });
       expect(handler).not.toHaveBeenCalled();
       expect(res?.error).toMatchObject({ code: -32602, data: { violations: ['bogus: not an accepted argument'] } });
     } finally {

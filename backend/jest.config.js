@@ -26,7 +26,6 @@ module.exports = {
     '^@libs/aurora$': '<rootDir>/libs/aurora/src',
     '^@libs/authz$': '<rootDir>/libs/authz/src',
     '^@libs/avatar$': '<rootDir>/libs/avatar/src',
-    '^@libs/cache$': '<rootDir>/libs/cache/src',
     '^@libs/credentials$': '<rootDir>/libs/credentials/src',
     '^@libs/di$': '<rootDir>/libs/di/src',
     '^@libs/glean$': '<rootDir>/libs/glean/src',

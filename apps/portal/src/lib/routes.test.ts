@@ -1,20 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { routeIdOf } from './routes';
+
+// A synthetic domain so the test does not depend on whichever example is installed.
+vi.mock('../domain', () => ({
+  DOMAIN: {
+    routes: [
+      { path: '/things', element: null },
+      { path: '/things/:id', element: null, entity: 'thing' },
+    ],
+    nav: [],
+    crumbLabels: {},
+  },
+}));
 
 // BASENAME is '/' under vitest (BASE_URL defaults to '/'), so paths here are basename-free.
 describe('routeIdOf', () => {
   it('passes static routes through as their own page id', () => {
     expect(routeIdOf('/')).toEqual({ pageId: '/' });
-    expect(routeIdOf('/items')).toEqual({ pageId: '/items' });
+    expect(routeIdOf('/things')).toEqual({ pageId: '/things' });
     expect(routeIdOf('/admin/api-keys')).toEqual({ pageId: '/admin/api-keys' });
   });
 
   it('templates dynamic segments and reports the entity', () => {
-    expect(routeIdOf('/items/itm_abc123')).toEqual({ pageId: '/items/:id', entityType: 'item', entityId: 'itm_abc123' });
+    expect(routeIdOf('/things/thg_abc123')).toEqual({ pageId: '/things/:id', entityType: 'thing', entityId: 'thg_abc123' });
   });
 
   it('collapses every entity of a route onto one page id', () => {
-    const ids = ['/items/a', '/items/b', '/items/c'].map((p) => routeIdOf(p).pageId);
+    const ids = ['/things/a', '/things/b', '/things/c'].map((p) => routeIdOf(p).pageId);
     expect(new Set(ids).size).toBe(1);
   });
 

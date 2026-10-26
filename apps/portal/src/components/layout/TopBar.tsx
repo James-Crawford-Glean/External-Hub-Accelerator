@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { NotificationsMenu } from './NotificationsMenu';
 import { useCurrentUser } from '../../data/useCurrentUser';
+import { DOMAIN } from '../../domain';
 import { logout } from '../../lib/auth/userManager';
 import { PORTAL_NAME } from '../../lib/api/config';
 
@@ -14,7 +15,6 @@ interface Crumb {
 }
 
 const LABELS: Record<string, string> = {
-  items: 'Items',
   users: 'People',
   admin: 'Admin',
   roles: 'Roles & access',
@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   'login-activity': 'Login activity',
   aws: 'AWS',
   callback: 'Connecting Glean',
+  ...DOMAIN.crumbLabels,
 };
 
 function crumbsFor(pathname: string): Crumb[] {
@@ -31,7 +32,7 @@ function crumbsFor(pathname: string): Crumb[] {
   let acc = '';
   for (const part of parts) {
     acc += `/${part}`;
-    out.push({ label: LABELS[part] ?? (part.startsWith('itm_') ? 'Item' : part), to: acc });
+    out.push({ label: LABELS[part] ?? DOMAIN.crumbLabelForId?.(part) ?? part, to: acc });
   }
   return out;
 }
