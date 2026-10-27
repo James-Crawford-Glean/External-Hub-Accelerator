@@ -1,7 +1,8 @@
 // URL / host normalization — the single source for turning any dirty URL-ish value
 // (`https://www.x.com/`, the colon-less `https//www.x.com`, protocol-relative `//x.com`,
-// or a bare `x.com`) into a clean host. Used by the logo fetch and by record writes so a
-// scheme is never doubled and the logo/match key is never garbage.
+// or a bare `x.com`) into a clean host. The logo service uses it so a scheme is never
+// doubled and the logo cache key is never garbage; any code that stores a website
+// should normalize through it too.
 // Pure — no dependencies, safe to import from any layer.
 
 // Leading scheme in any form: 'https://', the malformed colon-less 'https//', or a
