@@ -83,13 +83,13 @@ describe('GleanResolver.gleanCompleteConnect', () => {
   });
 
   it('dispatches a self-only avatar sync to the worker without blocking connect', async () => {
-    process.env.AVATAR_SYNC_FUNCTION = 'avatar-sync-uat';
+    process.env.AVATAR_SYNC_FUNCTION = 'avatar-sync-example';
     const worker = fakeWorker();
     const glean = fakeGlean();
     const svc = new GleanResolver(glean, worker, fakeAuthz());
     await svc.gleanCompleteConnect({ code: 'c', state: 's' }, null, identity);
 
-    expect(worker.invokeAsync).toHaveBeenCalledWith('avatar-sync-uat', { ownerUserId: 'owner-1', self: true });
+    expect(worker.invokeAsync).toHaveBeenCalledWith('avatar-sync-example', { ownerUserId: 'owner-1', self: true });
   });
 
   it('skips the avatar dispatch (no throw) when AVATAR_SYNC_FUNCTION is unset', async () => {
