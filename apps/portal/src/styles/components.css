@@ -440,8 +440,6 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-/* Label for an SF-synced (read-only) field: inline lock glyph, subtle help cursor. */
-
 .ps-field__hint {
   font-size: var(--text-xs);
   color: var(--color-ink-subtle);

@@ -1,9 +1,9 @@
 // Query.gleanConnection / Mutation.glean* — per-user Glean OAuth (public DCR
-// client + PKCE). Connect/status/disconnect are
-// per-user (any signed-in caller manages their own token custody);
-// gleanSetEndpoint switches the shared tenant and stays admin-only. Tokens are
-// stored server-side keyed by the caller's SF user id; the SPA never sees a
-// Glean token.
+// client + PKCE). Connect/status/disconnect are per-user (any signed-in caller
+// manages their own token custody); gleanSetEndpoint switches the shared tenant
+// and stays admin-only. Tokens are stored server-side keyed by the caller's
+// registry usr_* id (resolved by email, falling back to the Cognito sub; see
+// GleanService.ownerId); the SPA never sees a Glean token.
 //
 // gleanToken() is the internal token RPC for the glean-stream Node proxy (direct
 // invoke, not AppSync). It is registered under the key 'op:glean_token' — it
