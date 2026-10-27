@@ -64,10 +64,10 @@ afterEach(() => {
 });
 
 describe('GleanService.ownerId', () => {
-  it('resolves the SF user id from sync.users by lowercased email', async () => {
-    const { aurora, query } = fakeAurora([[{ id: 'sf-user-1' }]]);
+  it('resolves the registry user id from app.users by lowercased email', async () => {
+    const { aurora, query } = fakeAurora([[{ id: 'usr_00000000000001' }]]);
     const svc = new GleanService(aurora);
-    expect(await svc.ownerId('Alice@Example.com', 'cognito-sub')).toBe('sf-user-1');
+    expect(await svc.ownerId('Alice@Example.com', 'cognito-sub')).toBe('usr_00000000000001');
     const [, params] = query.mock.calls[0];
     expect(params).toEqual({ e: 'alice@example.com' });
   });
@@ -82,7 +82,7 @@ describe('GleanService.ownerId', () => {
     const { aurora, query } = fakeAurora();
     const svc = new GleanService(aurora);
     expect(await svc.ownerId(null, null)).toBe('unknown');
-    // no email => no sync.users query issued
+    // no email => no app.users query issued
     expect(query).not.toHaveBeenCalled();
   });
 });
