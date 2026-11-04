@@ -34,6 +34,27 @@ The mapping lives in one function, `toDocument` in
 `backend/apps/workers/glean-index/src/lambda.ts`. It is the only place that
 knows your fields.
 
+## Which rows are eligible
+
+Only live rows are indexed: `ACTIVE` and `ARCHIVED`. `DRAFT` and `REJECTED`
+rows never reach Glean, so an assistant-created draft stays out of search until
+a writer approves it. An incremental run deletes the document for any changed
+row that is no longer live.
+
+## Limits to design around
+
+- **Not a live read.** A change is searchable only after the next successful
+  run and Glean's processing: up to one schedule interval plus processing time.
+  Questions about a record's current state belong to the MCP tools.
+- **Owner-only for restricted rows.** A role-restricted row is visible in Glean
+  to its owner alone, which is narrower than the portal: other users with the
+  same visibility role see it in the portal and through `searchItems`, not in
+  Glean search. A restricted row whose owner has no email is indexed with an
+  empty allow list. Role parity needs Glean groups (`allowedGroups`) and group
+  sync, which the worker does not do.
+- **Service credential.** The worker pushes with a datasource-scoped token,
+  not as any user; the per-document permissions are what scope the results.
+
 ## Schedule and on-demand
 
 - **Incremental** every 15 minutes: rows whose `updated_at` is after the last

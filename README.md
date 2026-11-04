@@ -109,13 +109,13 @@ flowchart LR
     appsync["AppSync GraphQL"]
     authorizer["Lambda authorizer<br/>Cognito JWT + API keys"]
     gql["GraphQL dispatcher Lambda"]
-    mcp["MCP server Lambda<br/>OAuth 2.1 resource server"]
-    stream["Glean chat stream Lambda"]
+    mcp["MCP server Lambda<br/>HTTP API, own hostname<br/>OAuth 2.1 resource server"]
+    stream["Glean chat stream Lambda<br/>streaming REST API, Cognito authorizer"]
   end
 
   subgraph data["Data"]
-    aurora[("Aurora Serverless v2")]
-    ddb[("DynamoDB<br/>users, api_keys, caches, run logs")]
+    aurora[("Aurora Serverless v2<br/>users, roster, items, Glean tokens, run log")]
+    ddb[("DynamoDB<br/>api_keys, enrichment_cache")]
   end
 
   user --> dns --> cf --> edgefn --> spa
@@ -140,8 +140,19 @@ Design choices worth knowing before you adapt it:
 - **MCP is an OAuth 2.1 resource server.** An MCP host discovers the server
   through RFC 8414 / 9728 metadata, registers a client with RFC 7591 DCR
   against Cognito, and presents access tokens scoped `<mcp-url>/read` or
-  `/write`. Opaque API keys for service accounts ride the same unified
-  authorizer the GraphQL API uses.
+  `/write`. A host that cannot use DCR uses a pre-registered Cognito client:
+  the example creates one with a loopback redirect, and adding a host's
+  redirect URI to `mcp.callback_urls` in `live/<env>/infra/cognito`
+  pre-registers that host. Registration identifies the client only; the user
+  still signs in, and the portal's role, write, and visibility checks still
+  run on every call. Opaque API keys for service accounts ride the same
+  unified authorizer the GraphQL API uses.
+- **The index is a copy; MCP is the live read.** The `glean-index` worker
+  pushes `ACTIVE` and `ARCHIVED` items (never `DRAFT` or `REJECTED`), so a
+  change is searchable only after the next successful run and Glean's
+  processing. Role-restricted items are indexed for their owner only, which is
+  narrower than the portal's role model. Questions about current state belong
+  to the MCP tools.
 - **MCP writes are drafts.** A tool that creates a record (`createItem`)
   writes it with `status = 'DRAFT'` under the acting user and posts a
   notification to them. Drafts are hidden from default reads, from search,
@@ -164,8 +175,13 @@ Design choices worth knowing before you adapt it:
 - **Secrets are read at runtime, not apply time.** The CI role is denied
   `secretsmanager:GetSecretValue` except for the one Google OAuth client
   secret Cognito needs. Lambdas read everything else when they run.
-- **Auto-pause by default.** Aurora Serverless v2 scales to zero in non-prod;
-  the warmer runs once a day so pause still pays off. Production flips both.
+- **Auto-pause is a default, not a guarantee.** The Aurora module sets
+  `min_capacity = 0` with a 3600-second pause timer, and the warmer runs once a
+  day. The example's `glean-index` (every 15 minutes) and `item-sync` (hourly)
+  workers touch Aurora more often than that, so as shipped the example cluster
+  does not pause. Lengthen those schedules past the timer if pause matters, or
+  set a nonzero minimum when sync cadence or first-call latency matters more;
+  a resume takes roughly 15 to 30 seconds. Production keeps a warm minimum.
 
 ## What the first real deploy needs
 
@@ -353,7 +369,10 @@ CI runs the same set on every pull request.
 
 - [White paper](docs/white-paper.md): the architecture, the four Glean
   surfaces, the guardrails, and how to adapt the platform to a new domain.
-  Draft for internal review.
+  Draft for internal review. A six-page overview for a general reader,
+  *Connecting Glean to a Custom Portal*, is in review outside this repository
+  and cites this README, the white paper, and the MCP design and indexing
+  pages as its sources.
 - [Extraction plan](docs/extraction-plan.md): the record of how this
   repository was extracted from PartnerSync, increment by increment.
 - [Skill authoring](apps/dev/docs/mcp/skill-authoring.md): how to write the

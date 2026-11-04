@@ -40,7 +40,7 @@ output "oauth_token_url" {
 }
 
 output "mcp_client_id" {
-  description = "MCP public app client id. The MCP Lambda's access-token verifier pins `client_id` to this. null when var.mcp is unset."
+  description = "Pre-registered public MCP app client id, for hosts that cannot use DCR. The access-token verifier trusts resource-server scopes, not this id. null when var.mcp is unset."
   value       = one(aws_cognito_user_pool_client.mcp[*].id)
 }
 

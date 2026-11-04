@@ -62,12 +62,17 @@ URL:
 1. It fetches `/.well-known/oauth-protected-resource`, learns the authorization
    server, and registers itself with `POST /register` (RFC 7591). The server
    mints a Cognito app client for it; the host's redirect hosts must be on the
-   `OAUTH_REDIRECT_HOSTS` allowlist (for Glean, your tenant's backend host).
+   `OAUTH_REDIRECT_HOSTS` allowlist (set from `MCP_REDIRECT_HOSTS` at deploy;
+   for Glean, your tenant's backend host). A host that cannot register uses the
+   pre-registered `mcp` client instead: add its redirect URI to
+   `mcp.callback_urls` in `live/<env>/infra/cognito`. Registration identifies
+   the host only; it signs no one in and grants nothing.
 2. The user signs in through Cognito's hosted UI and consents to the
    `<mcp-url>/read` and `<mcp-url>/write` scopes.
 3. The host sends the resulting Cognito **access token** as the bearer. The
    Lambda verifies it against the pool's JWKS, checks `aud` against the resource
-   identifier, and resolves the user's email against the access roster.
+   identifier when the token carries one, requires a resource scope, and
+   resolves the user's email against the access roster.
 
 The acting user is therefore known on every call. A `read`-only grant can never
 write, whatever the person's roster role says.
